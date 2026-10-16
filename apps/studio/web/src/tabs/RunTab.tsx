@@ -4,6 +4,10 @@ import { api, projectUrl, type EngineChoice } from '../api.ts';
 import type { ProjectHook } from '../App.tsx';
 import { RotateCcw, Square, Timer, X } from 'lucide-react';
 import { AgentAvatar } from '../ui/display.tsx';
+import { ActionBar } from '../shell/ActionBar.tsx';
+import { runBody, useRunSettings } from '../lib/storage.ts';
+import { describeRun, formatDurationShort } from '../labels.ts';
+import { useToast } from '../ui/toast.tsx';
 import { AGENT_STATUS, agentColor, formatDuration, formatTime, RUN_STATUS, TASK_STATUS } from '../labels.ts';
 
 const COLUMNS: { title: string; statuses: TaskStatus[] }[] = [
@@ -23,12 +27,14 @@ function useNow(active: boolean) {
   return now;
 }
 
-export function RunTab({ project, choice, goPlan }: { project: ProjectHook; choice: EngineChoice; goPlan: () => void }) {
+export function RunTab({ project, choice, goPlan, goFiles }: { project: ProjectHook; choice: EngineChoice; goPlan: () => void; goFiles: () => void }) {
   const { snapshot: s, running, details } = project;
   const [agentFilter, setAgentFilter] = useState<string | null>(null);
   const [openTask, setOpenTask] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const now = useNow(running);
+  const [settings] = useRunSettings();
+  const toast = useToast();
   const feedRef = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
 
@@ -52,9 +58,16 @@ export function RunTab({ project, choice, goPlan }: { project: ProjectHook; choi
   const feed = agentFilter ? s.feed.filter((f) => f.agentId === agentFilter) : s.feed;
   const task = openTask ? s.tasks[openTask] : undefined;
 
-  const stop = () => api(projectUrl(details!.name, '/stop'), { body: {} }).catch((e: Error) => setError(e.message));
+  const stop = () =>
+    api(projectUrl(details!.name, '/stop'), { body: {} }).then(
+      () => toast({ tone: 'info', title: 'Запуск остановлен' }),
+      (e: Error) => setError(e.message),
+    );
   const restart = () =>
-    api(projectUrl(details!.name, '/run'), { body: { engine: choice.engine, model: choice.model } }).catch((e: Error) => setError(e.message));
+    api(projectUrl(details!.name, '/run'), { body: { engine: choice.engine, model: choice.model, ...runBody(settings) } }).then(
+      () => toast({ tone: 'info', title: `Агенты запущены · ${tasks.length} задач` }),
+      (e: Error) => setError(e.message),
+    );
 
   return (
     <div className="run">
@@ -68,13 +81,20 @@ export function RunTab({ project, choice, goPlan }: { project: ProjectHook; choi
         </span>
         <span className="muted"><Timer size={14} aria-hidden /> {formatDuration(elapsed)}</span>
         <span className="muted" title="Оценка стоимости по данным CLI (при подписке списывается из лимитов)">≈ ${s.costUsd.toFixed(2)}</span>
-        <div className="spacer" />
-        {running ? (
-          <button className="danger-btn" onClick={stop}><Square size={14} fill="currentColor" aria-hidden /> Остановить</button>
-        ) : (
-          <button className="ghost" onClick={restart}><RotateCcw size={14} aria-hidden /> Запустить снова</button>
-        )}
       </section>
+      {running ? (
+        <ActionBar
+          hint={describeRun(s)}
+          primary={{ label: 'Остановить', icon: Square, iconFill: true, tone: 'danger', onClick: () => void stop(), confirm: { title: 'Остановить агентов?', text: 'Готовые задачи сохранятся. Текущие прервутся — их можно будет запустить заново', confirmLabel: 'Остановить', cancelLabel: 'Продолжить работу', tone: 'danger' } }}
+        />
+      ) : (
+        <ActionBar
+          hint={s.status === 'done' ? `Готово за ${formatDurationShort(elapsed)} · ${done} из ${tasks.length} задач` : describeRun(s)}
+          hintTone={s.status === 'done' ? 'ok' : s.status === 'failed' ? 'bad' : s.status === 'stopped' ? 'warn' : undefined}
+          secondary={[{ label: 'Запустить заново', icon: RotateCcw, onClick: () => void restart(), confirm: { title: 'Запустить все задачи заново?', text: 'Агенты начнут с начала по текущему плану. Уже созданные файлы останутся в папке проекта', confirmLabel: 'Запустить' } }]}
+          primary={s.status === 'done' ? { label: 'Открыть результат', onClick: goFiles, hotkey: 'mod+enter' } : { label: 'Исправить план', onClick: goPlan, hotkey: 'mod+enter' }}
+        />
+      )}
       {error && <div className="error">{error}</div>}
 
       <section className="agents-live">

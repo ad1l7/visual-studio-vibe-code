@@ -2,13 +2,13 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 import { api, projectUrl, type ClarifyQuestion, type EngineChoice, type Plan } from '../api.ts';
 import type { ProjectHook } from '../App.tsx';
+import { ActionBar } from '../shell/ActionBar.tsx';
 
 const EXAMPLE = `Хочу сайт для небольшой кофейни: меню с фото и ценами, онлайн-заказ с самовывозом ко времени, личный кабинет с историей заказов и бонусами. Админка для бариста: принимать заказы, менять меню. Оплата картой онлайн.`;
 
 export function SpecTab({ project, choice, onPlanned }: { project: ProjectHook; choice: EngineChoice; onPlanned: () => void }) {
   const { details, plannerLog, clearPlannerLog, setPlan, setSpec } = project;
   const [spec, setLocalSpec] = useState(details?.spec ?? '');
-  const [askQuestions, setAskQuestions] = useState(true);
   const [questions, setQuestions] = useState<ClarifyQuestion[] | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<null | 'clarify' | 'plan'>(null);
@@ -34,7 +34,6 @@ export function SpecTab({ project, choice, onPlanned }: { project: ProjectHook; 
 
   const start = async () => {
     setError(null);
-    if (!askQuestions) return makePlan();
     setBusy('clarify');
     clearPlannerLog();
     try {
@@ -63,21 +62,27 @@ export function SpecTab({ project, choice, onPlanned }: { project: ProjectHook; 
         disabled={!!busy || !!questions}
         aria-label="Техническое задание"
       />
-      {!questions && (
+      {!questions && !spec.trim() && (
         <div className="row">
-          <label className="check">
-            <input type="checkbox" checked={askQuestions} onChange={(e) => setAskQuestions(e.target.checked)} /> Сначала задать уточняющие вопросы
-          </label>
-          <div className="spacer" />
-          {!spec.trim() && (
-            <button className="ghost" onClick={() => setLocalSpec(EXAMPLE)}>
-              Вставить пример
-            </button>
-          )}
-          <button className="primary big" disabled={!spec.trim() || !!busy} onClick={start}>
-            {details?.plan ? 'Пересобрать план' : 'Подобрать команду агентов'} <ArrowRight size={16} aria-hidden />
+          <button className="ghost" onClick={() => setLocalSpec(EXAMPLE)}>
+            Вставить пример
           </button>
         </div>
+      )}
+      {questions ? (
+        <ActionBar
+          hint={busy ? 'Проектирую систему…' : `Отвечено ${questions.filter((q) => answers[q.id]?.trim()).length} из ${questions.length} · можно пропустить`}
+          hintTone={busy ? 'busy' : undefined}
+          secondary={[{ label: 'Пропустить вопросы', onClick: () => void makePlan(), disabled: !!busy }]}
+          primary={{ label: 'Составить план', iconRight: ArrowRight, onClick: () => void makePlan(questions, answers), disabled: !!busy, hotkey: 'mod+enter' }}
+        />
+      ) : (
+        <ActionBar
+          hint={busy ? (busy === 'clarify' ? 'Изучаю ТЗ…' : 'Проектирую систему…') : details?.plan ? 'План уже составлен. Новый план заменит текущий' : 'Опишите идею своими словами или выберите шаблон'}
+          hintTone={busy ? 'busy' : undefined}
+          secondary={[{ label: 'Сразу составить план', onClick: () => void makePlan(), disabled: !spec.trim() || !!busy, tip: 'Студия сама примет решения по неясным местам' }]}
+          primary={{ label: details?.plan ? 'Пересобрать план' : 'Подобрать команду', iconRight: ArrowRight, onClick: () => void start(), disabled: !spec.trim() || !!busy, disabledReason: busy ? undefined : 'Напишите хотя бы пару предложений', hotkey: 'mod+enter' }}
+        />
       )}
 
       {questions && (
@@ -100,13 +105,6 @@ export function SpecTab({ project, choice, onPlanned }: { project: ProjectHook; 
           <div className="row">
             <button className="ghost" onClick={() => setQuestions(null)} disabled={!!busy}>
               <ArrowLeft size={16} aria-hidden /> Изменить ТЗ
-            </button>
-            <div className="spacer" />
-            <button className="ghost" onClick={() => makePlan()} disabled={!!busy}>
-              Пропустить вопросы
-            </button>
-            <button className="primary big" onClick={() => makePlan(questions, answers)} disabled={!!busy}>
-              Составить план <ArrowRight size={16} aria-hidden />
             </button>
           </div>
         </div>

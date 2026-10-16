@@ -10,21 +10,6 @@
   --gutter-l: max(16px, env(safe-area-inset-left, 0px));
   --gutter-r: max(16px, env(safe-area-inset-right, 0px));
 }
-body { overflow: auto; }
-* { box-sizing: border-box; }
-html, body, #root { height: 100%; }
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font: 14px/1.5 var(--font-sans);
-}
-h1, h2, h3, h4 { margin: 0 0 8px; line-height: 1.25; }
-h1 { font-size: 30px; }
-h2 { font-size: 18px; }
-h3 { font-size: 16px; }
-h4 { font-size: 13px; margin-top: 16px; color: var(--muted); }
-p { margin: 0 0 8px; }
 button, input, select, textarea { font: inherit; color: inherit; }
 input, select, textarea {
   background: var(--panel-2);
@@ -37,11 +22,6 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 button { cursor: pointer; border: none; background: none; }
 button:disabled { cursor: not-allowed; opacity: .5; }
 
-.mono { font-family: var(--mono); }
-.small { font-size: 12px; }
-.muted { color: var(--muted); }
-.spacer { flex: 1; }
-.grow { flex: 1; }
 .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
@@ -76,38 +56,10 @@ button.chip:hover:not(:disabled) { border-color: var(--accent); }
 .status-blocked, .status-cancelled { color: var(--warn); }
 
 /* Каркас */
-.app { min-height: 100%; display: flex; flex-direction: column; }
-.topbar { display: flex; align-items: center; gap: 12px; padding-block: 10px; padding-left: var(--gutter-l); padding-right: var(--gutter-r); border-bottom: 1px solid var(--border); background: var(--panel); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; }
-body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--panel); }
-.demo-banner { padding-block: 8px; padding-left: var(--gutter-l); padding-right: var(--gutter-r); background: color-mix(in srgb, var(--accent) 14%, var(--panel)); border-bottom: 1px solid var(--border); font-size: 13px; }
-.demo-banner code { font-family: var(--mono); background: var(--panel-2); padding: 1px 6px; border-radius: 5px; }
-.logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; }
-.logo-mark { width: 26px; height: 26px; border-radius: 7px; background: var(--accent); display: grid; place-items: center; font-size: 14px; color: var(--on-accent); }
-.crumb { color: var(--muted); }
-.engine-picker { display: flex; align-items: center; gap: 8px; }
-.engine-picker select { width: auto; padding: 5px 8px; }
-.dot { width: 8px; height: 8px; border-radius: 50%; }
-.dot.ok { background: var(--ok); }
-.dot.bad { background: var(--bad); }
-.tabs { display: flex; align-items: center; gap: 4px; padding-left: var(--gutter-l); padding-right: var(--gutter-r); border-bottom: 1px solid var(--border); background: var(--panel); overflow-x: auto; }
-.tabs button { padding: 12px 14px; border-bottom: 2px solid transparent; color: var(--muted); white-space: nowrap; }
-.tabs button.active { color: var(--text); border-bottom-color: var(--accent); }
-.tab-extra { margin-left: 6px; font-size: 11px; background: var(--panel-2); border-radius: 999px; padding: 1px 7px; }
-.tab-extra.live { color: var(--info); animation: blink 1.2s infinite; background: none; }
-.path { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
-.page { padding-block: 24px 48px; padding-left: var(--gutter-l); padding-right: var(--gutter-r); max-width: 1400px; width: 100%; margin: 0 auto; }
-.empty { text-align: center; padding: 60px 0; color: var(--muted); }
 .section-head { margin: 24px 0 12px; }
 .section-head h2 { margin: 0; }
 
 /* Проекты */
-.projects { max-width: 1000px; margin: 0 auto; padding-block: 48px; padding-left: var(--gutter-l); padding-right: var(--gutter-r); width: 100%; }
-.hero { margin-bottom: 40px; }
-.hero p { color: var(--muted); font-size: 16px; max-width: 720px; }
-.new-project { display: flex; gap: 10px; margin-top: 20px; max-width: 640px; }
-.project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
-.project-card { text-align: left; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
-.project-card:hover { border-color: var(--accent); }
 
 /* ТЗ */
 .spec { max-width: 900px; margin: 0 auto; }
@@ -192,9 +144,5 @@ button.task-card:hover { background: var(--panel-2); }
   .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .files-tab { grid-template-columns: 1fr; }
   .launch { position: static; }
-  .new-project { flex-direction: column; }
-  .topbar { flex-wrap: wrap; }
-  .page { padding-block: 16px 40px; }
-  .path { display: none; }
 }
 

@@ -1,5 +1,10 @@
 import { plural, type AgentSpec, type TaskSpec } from '@vibe/core/shared';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { ActionBar } from '../shell/ActionBar.tsx';
+import { runBody, useRunSettings } from '../lib/storage.ts';
+import type { PlanDraft } from '../usePlanDraft.ts';
+import { useToast } from '../ui/toast.tsx';
+import { agentsWord, tasksWord } from '../labels.ts';
 import { api, projectUrl, type EngineChoice, type Plan } from '../api.ts';
 import type { ProjectHook } from '../App.tsx';
 import { Check, Folder, Lightbulb, Play } from 'lucide-react';
@@ -33,21 +38,19 @@ function slug(s: string, taken: Set<string>): string {
   return id;
 }
 
-export function PlanTab({ project, choice, onStarted, goSpec }: { project: ProjectHook; choice: EngineChoice; onStarted: () => void; goSpec: () => void }) {
-  const { details, setPlan, running } = project;
-  const [draft, setDraft] = useState<Plan | null>(details?.plan ?? null);
-  const [dirty, setDirty] = useState(false);
+export function PlanTab({ project, draft: planDraft, choice, onStarted, goSpec }: { project: ProjectHook; draft: PlanDraft; choice: EngineChoice; onStarted: () => void; goSpec: () => void }) {
+  const { details, running } = project;
+  const { draft, dirty, update, save, reset } = planDraft;
+  const toast = useToast();
   const [error, setError] = useState<string | null>(null);
   const [editAgent, setEditAgent] = useState<string | null>(null);
   const [editTask, setEditTask] = useState<string | null>(null);
-  const [concurrency, setConcurrency] = useState(3);
-  const [attempts, setAttempts] = useState(2);
-  const [fullAccess, setFullAccess] = useState(false);
+  const [settings, setSettings] = useRunSettings();
+  const { concurrency, maxAttempts: attempts, fullAccess } = settings;
+  const setConcurrency = (v: number) => setSettings({ ...settings, concurrency: v });
+  const setAttempts = (v: number) => setSettings({ ...settings, maxAttempts: v });
+  const setFullAccess = (v: boolean) => setSettings({ ...settings, fullAccess: v });
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (!dirty) setDraft(details?.plan ?? null);
-  }, [details?.plan, dirty]);
 
   const columns = useMemo(() => (draft ? waves(draft) : []), [draft]);
   if (!draft) {
@@ -61,33 +64,15 @@ export function PlanTab({ project, choice, onStarted, goSpec }: { project: Proje
     );
   }
 
-  const update = (p: Plan) => {
-    setDraft(p);
-    setDirty(true);
-  };
   const agentById = new Map(draft.agents.map((a) => [a.id, a]));
 
-  const save = async (): Promise<boolean> => {
-    setError(null);
-    try {
-      const { plan } = await api<{ plan: Plan }>(projectUrl(details!.name, '/plan'), { method: 'PUT', body: { plan: draft } });
-      setPlan(plan);
-      setDraft(plan);
-      setDirty(false);
-      return true;
-    } catch (e) {
-      setError((e as Error).message);
-      return false;
-    }
-  };
 
   const launch = async () => {
     setBusy(true);
     try {
-      if (dirty && !(await save())) return;
-      await api(projectUrl(details!.name, '/run'), {
-        body: { engine: choice.engine, model: choice.model, concurrency, maxAttempts: attempts, permissionMode: fullAccess ? 'bypassPermissions' : 'acceptEdits' },
-      });
+      if (dirty && !(await save({ quiet: true }))) return;
+      await api(projectUrl(details!.name, '/run'), { body: { engine: choice.engine, model: choice.model, ...runBody(settings) } });
+      toast({ tone: 'info', title: `Агенты запущены · ${tasksWord(draft.tasks.length)}` });
       onStarted();
     } catch (e) {
       setError((e as Error).message);
@@ -253,19 +238,21 @@ export function PlanTab({ project, choice, onStarted, goSpec }: { project: Proje
             Полный доступ к командам <span className="muted small">(только в контейнере/виртуалке)</span>
           </label>
         </div>
-        <div className="row">
-          {error && <div className="error grow">{error}</div>}
-          <div className="spacer" />
-          {dirty && (
-            <button className="ghost" onClick={() => void save()}>
-              Сохранить план
-            </button>
-          )}
-          <button className="primary big launch-btn" onClick={launch} disabled={busy || running}>
-            {running ? 'Агенты уже работают' : <><Play size={16} aria-hidden /> Запустить агентов</>}
-          </button>
-        </div>
+        {error && <div className="error grow">{error}</div>}
       </section>
+      <ActionBar
+        hint={dirty ? 'Есть несохранённые изменения' : running ? 'Агенты работают по этому плану' : `${agentsWord(draft.agents.length)} · ${tasksWord(draft.tasks.length)} · ${columns.length} этапа · ${concurrency} одновременно${fullAccess ? ' · полный доступ' : ''}`}
+        hintTone={dirty ? 'warn' : undefined}
+        secondary={
+          dirty
+            ? [
+                { label: 'Отменить правки', onClick: reset, confirm: { title: 'Отменить изменения?', text: 'План вернётся к последней сохранённой версии', confirmLabel: 'Отменить', cancelLabel: 'Нет', tone: 'danger' } },
+                { label: 'Сохранить', onClick: () => void save(), tip: 'Ctrl+S' },
+              ]
+            : []
+        }
+        primary={{ label: dirty ? 'Сохранить и запустить' : 'Запустить агентов', icon: Play, onClick: () => void launch(), disabled: running, disabledReason: 'Агенты уже работают', loading: busy, hotkey: 'mod+enter' }}
+      />
     </div>
   );
 }

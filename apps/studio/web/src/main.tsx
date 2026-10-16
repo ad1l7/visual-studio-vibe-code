@@ -2,6 +2,8 @@ import './styles/fonts.css';
 import './styles/tokens.css';
 import './styles/base.css';
 import './styles/components.css';
+import './styles/shell.css';
+import './styles/screens.css';
 import './styles/legacy.css';
 import { createRoot } from 'react-dom/client';
 import { setLocalBackend } from './api.ts';

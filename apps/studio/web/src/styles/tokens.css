@@ -206,8 +206,8 @@
   /* Слои */
   --z-sticky: 5;
   --z-drawer: 40;
-  --z-popover: 60;
-  --z-toast: 70;
+  --z-toast: 60;
+  --z-popover: 70;
   --z-tooltip: 80;
 }
 
