@@ -5,7 +5,9 @@ import { useNarrow, useWide } from '../lib/media.ts';
 import { IconButton } from '../ui/Button.tsx';
 import { Keys } from '../ui/display.tsx';
 import { useToast } from '../ui/toast.tsx';
+import { useOpenPalette } from './commands.tsx';
 import { DemoChip } from './DemoChip.tsx';
+import { useLocalSetting } from '../lib/storage.ts';
 
 export type StepState = 'todo' | 'done' | 'locked' | 'live' | 'error' | 'stopped';
 
@@ -37,6 +39,7 @@ export function copyText(text: string): Promise<void> {
 
 export function Stepper({ steps, current, onGo, variant }: { steps: StepInfo[]; current: ProjectStep; onGo: (s: ProjectStep) => void; variant: 'full' | 'segments' }) {
   const toast = useToast();
+  const wide = useWide();
   return (
     <ol className={`stepper stepper--${variant}`} aria-label="Шаги проекта">
       {steps.map((s, i) => {
@@ -70,7 +73,7 @@ export function Stepper({ steps, current, onGo, variant }: { steps: StepInfo[]; 
               ) : (
                 <Icon size={16} strokeWidth={1.75} aria-hidden />
               )}
-              <span className="step__label">{variant === 'full' ? STEP_LABELS[s.id] : STEP_SHORT[s.id]}</span>
+              <span className="step__label">{variant === 'full' && wide ? STEP_LABELS[s.id] : STEP_SHORT[s.id]}</span>
               {(s.state === 'live' || s.state === 'error' || s.state === 'stopped') && (
                 <span className={`dot ${s.state === 'live' ? 'dot--running' : s.state === 'error' ? 'dot--failed' : 'dot--stopped'}`} aria-hidden />
               )}
@@ -86,10 +89,15 @@ export function Stepper({ steps, current, onGo, variant }: { steps: StepInfo[]; 
   );
 }
 
-/** Шапка экрана: на телефоне 48 px с ☰, на десктопе 52 px. */
+/** Шапка экрана: на телефоне 48 px с кнопкой меню, на десктопе 52 px. */
 export function ScreenHeader({ title, sub, onMenu, children, right, onSearch }: { title: ReactNode; sub?: ReactNode; onMenu?: () => void; children?: ReactNode; right?: ReactNode; onSearch?: () => void }) {
   const narrow = useNarrow();
   const wide = useWide();
+  const openPalette = useOpenPalette();
+  const [sidebar] = useLocalSetting<'open' | 'rail'>('vibe.sidebar', 'open');
+  // На десктопе с раскрытым сайдбаром чип «Демо» уже есть в сайдбаре.
+  const headerChip = narrow || sidebar === 'rail';
+  onSearch ??= openPalette;
   return (
     <header className="screen-header">
       {narrow && onMenu && <IconButton icon={Menu} label="Меню: проекты и настройки" onClick={onMenu} />}
@@ -100,7 +108,7 @@ export function ScreenHeader({ title, sub, onMenu, children, right, onSearch }: 
       {children}
       <span className="grow" />
       {right}
-      <DemoChip auto />
+      {headerChip && <DemoChip auto />}
       {onSearch &&
         (!wide ? (
           <IconButton icon={Search} label="Поиск и команды (Ctrl+K)" onClick={onSearch} />

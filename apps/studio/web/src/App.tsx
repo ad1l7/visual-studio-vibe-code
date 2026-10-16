@@ -21,7 +21,10 @@ import { useToast } from './ui/toast.tsx';
 import { usePlanDraft, type PlanDraft } from './usePlanDraft.ts';
 import { useSpecFlow, type SpecFlow } from './useSpecFlow.ts';
 import { useProject } from './useProject.ts';
-import { TriangleAlert } from 'lucide-react';
+import { Copy, FileText, FolderOpen, Keyboard, Monitor, Moon, PackageCheck, Plus, Rocket, Rows3, Rows4, Settings2, Sun, TriangleAlert, Users } from 'lucide-react';
+import { CommandsProvider, useCommands, type Command } from './shell/commands.tsx';
+import { DENSITY_LABELS, THEME_LABELS, useDensity, useTheme } from './shell/settings.tsx';
+import { smartStep, STEP_LABELS } from './labels.ts';
 
 type Tab = ProjectStep;
 const TABS: Tab[] = ['spec', 'plan', 'run', 'files'];
@@ -40,7 +43,9 @@ export function App() {
   return (
     <ProjectsProvider>
       <EngineProvider>
-        <Shell />
+        <CommandsProvider>
+          <Shell />
+        </CommandsProvider>
       </EngineProvider>
     </ProjectsProvider>
   );
@@ -129,6 +134,20 @@ function Shell() {
     setSidebar((s) => (s === 'rail' ? 'open' : 'rail'));
   }, { inInputs: true });
   useHotkey('shift+?', () => setShortcutsOpen(true));
+
+  // Глобальные команды палитры: проекты и настройки.
+  const { projects } = useProjects();
+  const [theme, setTheme] = useTheme();
+  const [density, setDensity] = useDensity();
+  useCommands('global', [
+    { id: 'go:new', group: 'Перейти', label: 'Новый проект', icon: Plus, keywords: ['создать', 'new'], run: () => go(undefined, 'spec', { newProject: true }) },
+    { id: 'go:home', group: 'Перейти', label: 'Все проекты', icon: FolderOpen, keywords: ['главная', 'список', 'home'], run: () => go() },
+    ...(projects ?? []).map<Command>((p) => ({ id: `go:p:${p.name}`, group: 'Перейти', label: `Проект: ${p.title}`, hint: p.name, icon: FolderOpen, keywords: [p.name], run: () => go(p.name, smartStep(p)) })),
+    ...(['system', 'dark', 'light'] as const).map<Command>((t) => ({ id: `set:theme:${t}`, group: 'Настройки', label: `Тема: ${THEME_LABELS[t].toLowerCase()}`, hint: theme === t ? 'выбрано' : undefined, icon: t === 'dark' ? Moon : t === 'light' ? Sun : Monitor, keywords: ['тема', 'theme', t === 'dark' ? 'темная ночь' : t === 'light' ? 'светлая день' : 'система'], run: () => setTheme(t) })),
+    ...(['normal', 'compact'] as const).map<Command>((d) => ({ id: `set:density:${d}`, group: 'Настройки', label: `Плотность: ${DENSITY_LABELS[d].toLowerCase()}`, hint: density === d ? 'выбрано' : undefined, icon: d === 'compact' ? Rows4 : Rows3, keywords: ['плотность', 'компактно', 'density'], run: () => setDensity(d) })),
+    { id: 'set:engine', group: 'Настройки', label: 'Движок и модель…', icon: Settings2, keywords: ['модель', 'claude', 'демо', 'engine'], run: () => setEngineOpen(true) },
+    { id: 'set:keys', group: 'Настройки', label: 'Горячие клавиши', icon: Keyboard, hotkey: 'shift+?', keywords: ['клавиши', 'shortcuts'], run: () => setShortcutsOpen(true) },
+  ]);
 
   const rail = sidebar === 'rail';
   return (
@@ -230,23 +249,12 @@ function ProjectView({ name, tab, onProgress }: { name: string; tab: Tab; onProg
   }, [status]);
   useEffect(() => {
     let prefix = '';
-    if (running && tasks.length) prefix = `▶ ${done}/${tasks.length} · `;
-    else if (status === 'done' && !seenDone) prefix = '✓ ';
+    if (running && tasks.length) prefix = `\u25B6 ${done}/${tasks.length} · `;
+    else if (status === 'done' && !seenDone) prefix = '\u2713 ';
     else if (status === 'failed') prefix = '! ';
     document.title = `${prefix}${name} — Vibe Studio`;
     return () => void (document.title = 'Vibe Studio');
   }, [running, done, tasks.length, status, seenDone, name]);
-
-  if (project.error && !details) {
-    return (
-      <div className="screen">
-        <ScreenHeader title={name} onMenu={nav.openMenu} />
-        <div className="content">
-          <EmptyState icon={TriangleAlert} title="Не получилось открыть проект" text={project.error} action={{ label: 'К списку проектов', onClick: () => nav.go() }} />
-        </div>
-      </div>
-    );
-  }
 
   const steps: StepInfo[] = [
     { id: 'spec', state: details?.plan ? 'done' : 'todo' },
@@ -264,7 +272,26 @@ function ProjectView({ name, tab, onProgress }: { name: string; tab: Tab; onProg
   ];
 
   const goTab = (t: Tab) => nav.go(name, t);
+  const STEP_ICONS = { spec: FileText, plan: Users, run: Rocket, files: PackageCheck };
+  useCommands('project', [
+    ...steps
+      .filter((s) => s.state !== 'locked')
+      .map<Command>((s, i) => ({ id: `go:step:${s.id}`, group: 'Перейти', label: `Шаг ${i + 1}: ${STEP_LABELS[s.id]}`, icon: STEP_ICONS[s.id], hotkey: `alt+${i + 1}`, keywords: [s.id], run: () => goTab(s.id) })),
+    ...(details ? [{ id: 'act:copy-path', group: 'Действия' as const, label: 'Копировать путь к папке', icon: Copy, keywords: ['папка', 'путь', 'path'], run: () => void copyText(details.path).then(() => toast({ tone: 'success', title: 'Путь к папке скопирован', duration: 2000 })) }] : []),
+  ]);
   const activeTasks = tasks.filter((t) => ACTIVE_TASK.includes(t.status)).length;
+
+  if (project.error && !details) {
+    return (
+      <div className="screen">
+        <ScreenHeader title={name} onMenu={nav.openMenu} />
+        <div className="content">
+          <EmptyState icon={TriangleAlert} title="Не получилось открыть проект" text={project.error} action={{ label: 'К списку проектов', onClick: () => nav.go() }} />
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <ActionBarSlotContext.Provider value={slot}>
@@ -396,11 +423,7 @@ function TabContent({ tab, project, draft, flow, name, goTab, choice, view }: { 
         }}
       />
     );
-  return (
-    <div className="page">
-      <FilesTab name={name} refreshKey={snapshot ? Object.values(snapshot.tasks).filter((t) => t.status === 'done').length : 0} initialPath={nav.takePendingFile()} />
-    </div>
-  );
+  return <FilesTab name={name} path={project.details?.path ?? ''} snapshot={snapshot} refreshKey={snapshot ? Object.values(snapshot.tasks).filter((t) => t.status === 'done').length : 0} initialPath={nav.takePendingFile()} />;
 }
 
 export type ProjectHook = ReturnType<typeof useProject>;

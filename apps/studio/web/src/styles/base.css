@@ -16,6 +16,7 @@ body {
 }
 h1, h2, h3, h4, p { margin: 0; }
 h1, h2, h3, h4 { font-weight: 600; }
+strong, b { font-weight: 600; }
 h1 { font-size: var(--fs-22); line-height: var(--lh-22); letter-spacing: -0.01em; }
 h2 { font-size: var(--fs-18); line-height: var(--lh-18); letter-spacing: -0.01em; }
 h3 { font-size: var(--fs-15); line-height: var(--lh-15); }

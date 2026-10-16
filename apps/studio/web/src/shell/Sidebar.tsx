@@ -42,7 +42,7 @@ export function Sidebar({ rail, onToggleRail, active, onNavigate, onShortcuts, i
           </span>
           {!rail && <span className="logo__text">Vibe Studio</span>}
         </button>
-        {!rail && !inDrawer && <DemoChip />}
+        {!rail && !inDrawer && <DemoChip auto />}
       </div>
       <div className="sidebar__new">
         {rail ? (

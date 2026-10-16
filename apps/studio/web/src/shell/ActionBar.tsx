@@ -5,6 +5,7 @@ import { Ellipsis, LoaderCircle } from 'lucide-react';
 import { createContext, useContext, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useHotkey } from '../lib/hotkeys.ts';
+import { useCommands, type Command } from './commands.tsx';
 import { usePhone } from '../lib/media.ts';
 import { Button, IconButton } from '../ui/Button.tsx';
 import { Keys } from '../ui/display.tsx';
@@ -38,6 +39,16 @@ export interface ActionBarProps {
 
 export const ActionBarSlotContext = createContext<HTMLElement | null>(null);
 
+const KEYWORDS: [RegExp, string[]][] = [
+  [/запуст/i, ['старт', 'run', 'start', 'запуск', 'пуск']],
+  [/останов/i, ['стоп', 'stop', 'прервать']],
+  [/сохран/i, ['save', 'сохранить']],
+  [/план/i, ['plan']],
+  [/результат/i, ['файлы', 'files', 'итог']],
+  [/команд/i, ['агенты', 'вопросы']],
+];
+const keywordsFor = (label: string) => KEYWORDS.filter(([re]) => re.test(label)).flatMap(([, k]) => k);
+
 export function ActionBar(props: ActionBarProps) {
   const slot = useContext(ActionBarSlotContext);
   if (!slot) return null;
@@ -61,11 +72,32 @@ function ActionBarView({ hint, hintTone, secondary = [], primary }: ActionBarPro
     { inInputs: true },
   );
 
-  const inMenu = phone ? secondary.filter((a) => !a.icon) : [];
-  const shown = phone ? secondary.filter((a) => a.icon) : secondary;
+  // Действия панели доступны и из палитры команд: нажатие идёт через ту же кнопку (с подтверждением).
+  const bar = useRef<HTMLDivElement>(null);
+  useCommands(
+    'actionbar',
+    [...(primary ? [primary] : []), ...secondary]
+      .filter((a) => !a.disabled && !a.popover)
+      .map<Command>((a) => ({
+        id: `bar:${a.label}`,
+        group: 'Действия',
+        label: a.label,
+        icon: a.icon ?? a.iconRight,
+        keywords: keywordsFor(a.label),
+        hotkey: a === primary && a.tone !== 'danger' ? 'mod+enter' : undefined,
+        run: () => {
+          const btn = [...(bar.current?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find((b) => b.textContent?.startsWith(a.label) || b.getAttribute('aria-label') === a.label);
+          if (btn) btn.click();
+          else if (!a.confirm) a.onClick();
+        },
+      })),
+  );
+
+  const inMenu = phone && primary ? secondary.filter((a) => !a.icon) : [];
+  const shown = phone && primary ? secondary.filter((a) => a.icon) : secondary;
 
   return (
-    <div className="actionbar" role="region" aria-label="Действия">
+    <div className="actionbar" role="region" aria-label="Действия" ref={bar}>
       <div className={`actionbar__hint ${hintTone ? `actionbar__hint--${hintTone}` : ''}`} aria-live="polite">
         {hintTone === 'busy' && <LoaderCircle size={16} strokeWidth={1.75} className="spin" aria-hidden />}
         {(hintTone === 'warn' || hintTone === 'bad' || hintTone === 'ok') && <span className={`dot dot--${hintTone === 'warn' ? 'stopped' : hintTone === 'bad' ? 'failed' : 'done'}`} aria-hidden />}
@@ -74,7 +106,7 @@ function ActionBarView({ hint, hintTone, secondary = [], primary }: ActionBarPro
       <div className="actionbar__buttons">
         {inMenu.length > 0 && <MoreMenu actions={inMenu} />}
         {shown.map((a) => (
-          <ActionButton key={a.label} action={a} iconOnly={phone} />
+          <ActionButton key={a.label} action={a} iconOnly={phone && !!primary} />
         ))}
         {primary && <ActionButton action={primary} main buttonRef={(el) => (primaryRef.current = el)} />}
       </div>

@@ -5,6 +5,7 @@ import type { ProjectHook } from '../App.tsx';
 import { formatClock } from '../labels.ts';
 import { useNarrow } from '../lib/media.ts';
 import { ActionBar, type Action } from '../shell/ActionBar.tsx';
+import { useCommands } from '../shell/commands.tsx';
 import { Button, IconButton } from '../ui/Button.tsx';
 import { Callout, Chip } from '../ui/display.tsx';
 import { Textarea } from '../ui/form.tsx';
@@ -53,30 +54,45 @@ export function SpecTab({ project, flow, goPlan }: { project: ProjectHook; flow:
     questionsRef.current?.querySelector<HTMLElement>('.chip')?.focus({ preventScroll: true });
   }, [questions, busy]);
 
+  // Выделение после вставки ставим синхронно с новым текстом — до того, как пользователь начнёт печатать.
+  const pendingSel = useRef<[number, number] | null>(null);
+  useLayoutEffect(() => {
+    const el = textarea.current;
+    const sel = pendingSel.current;
+    if (!el || !sel) return;
+    pendingSel.current = null;
+    el.focus();
+    el.setSelectionRange(sel[0], sel[1]);
+  }, [spec]);
+
   const insertTemplate = (t: SpecTemplate, mode: 'replace' | 'append') => {
     const next = mode === 'replace' ? t.text : `${spec.trimEnd()}\n\n${t.text}`;
+    const offset = mode === 'replace' ? 0 : next.length - t.text.length;
+    const m = t.text.match(/\[[^\]]+\]/);
+    pendingSel.current = m && m.index !== undefined ? [offset + m.index, offset + m.index + m[0].length] : [next.length, next.length];
     setSpec(next);
-    requestAnimationFrame(() => {
-      const el = textarea.current;
-      if (!el) return;
-      el.focus();
-      const offset = mode === 'replace' ? 0 : next.length - t.text.length;
-      const m = t.text.match(/\[[^\]]+\]/);
-      if (m && m.index !== undefined) el.setSelectionRange(offset + m.index, offset + m.index + m[0].length);
-      else el.setSelectionRange(next.length, next.length);
-    });
   };
 
   const appendHint = (text: string) => {
     const next = `${spec.replace(/\s+$/, '')}${text}`;
+    pendingSel.current = [next.length, next.length];
     setSpec(next);
-    requestAnimationFrame(() => {
-      textarea.current?.focus();
-      textarea.current?.setSelectionRange(next.length, next.length);
-    });
   };
 
   const editing = !questions && !busy;
+  useCommands(
+    'spec',
+    editing
+      ? SPEC_TEMPLATES.map((t) => ({
+          id: `spec:tpl:${t.id}`,
+          group: 'Действия' as const,
+          label: `Вставить шаблон: ${t.label}`,
+          icon: Sparkles,
+          keywords: ['шаблон', 'пример', 'template'],
+          run: () => insertTemplate(t, spec.trim() ? 'append' : 'replace'),
+        }))
+      : [],
+  );
   const answered = questions ? questions.filter((q) => flow.answers[q.id]?.trim()).length : 0;
   const empty = !spec.trim();
 

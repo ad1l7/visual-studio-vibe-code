@@ -9,6 +9,7 @@ import { useHoverNone, useNarrow } from '../lib/media.ts';
 import { ancestorsOf, descendantsOf, removeAgent, removeTask, uniqueId, waves } from '../lib/plan.ts';
 import { runBody, useRunSettings } from '../lib/storage.ts';
 import { ActionBar } from '../shell/ActionBar.tsx';
+import { useCommands } from '../shell/commands.tsx';
 import { Button, IconButton } from '../ui/Button.tsx';
 import { AgentAvatar, Badge, Callout, Chip, EmptyState, Tag } from '../ui/display.tsx';
 import { ConfirmLayer, Menu, usePopover } from '../ui/overlay.tsx';
@@ -41,6 +42,16 @@ export function PlanTab({ project, draft: planDraft, choice, onStarted, goSpec, 
   );
 
   const columns = useMemo(() => (draft ? waves(draft) : []), [draft]);
+  useCommands(
+    'plan',
+    draft && !readOnly
+      ? [
+          { id: 'plan:add-agent', group: 'Действия', label: 'Добавить агента', icon: Plus, keywords: ['агент', 'роль', 'команда'], run: () => setEditing({ kind: 'agent', agent: { id: uniqueId('agent', draft.agents.map((a) => a.id)), role: '', description: '', scope: ['agent/'], instructions: '' }, isNew: true }) },
+          { id: 'plan:add-task', group: 'Действия', label: 'Добавить задачу', icon: Plus, keywords: ['задача', 'этап'], run: () => setEditing({ kind: 'task', task: { id: uniqueId('task', draft.tasks.map((t) => t.id)), agentId: draft.agents[0]!.id, title: '', description: '', acceptance: [], dependsOn: [] }, isNew: true }) },
+          ...(dirty ? [{ id: 'plan:save', group: 'Действия' as const, label: 'Сохранить план', icon: Pencil, hotkey: 'mod+s', keywords: ['save'], run: () => void save() }] : []),
+        ]
+      : [],
+  );
 
   // «Открыть в плане» из панели задачи на дашборде.
   useEffect(() => {
@@ -97,7 +108,6 @@ export function PlanTab({ project, draft: planDraft, choice, onStarted, goSpec, 
     return '';
   };
 
-  const info = draft.project;
   const counts = new Map<string, number>();
   for (const t of draft.tasks) counts.set(t.agentId, (counts.get(t.agentId) ?? 0) + 1);
   const pinnedAgent = pinned ? draft.agents.find((a) => a.id === pinned) : undefined;
