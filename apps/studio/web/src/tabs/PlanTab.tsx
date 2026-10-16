@@ -40,6 +40,7 @@ export function PlanTab({ project, choice, onStarted, goSpec }: { project: Proje
   const [attempts, setAttempts] = useState(2);
   const [fullAccess, setFullAccess] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (!dirty) setDraft(details?.plan ?? null);
@@ -94,7 +95,7 @@ export function PlanTab({ project, choice, onStarted, goSpec }: { project: Proje
 
   const removeAgent = (id: string) => {
     const tasks = draft.tasks.filter((t) => t.agentId === id);
-    if (tasks.length && !confirm(`Удалить агента и его задачи (${tasks.length})?`)) return;
+    setConfirmDelete(null);
     const removed = new Set(tasks.map((t) => t.id));
     update({
       ...draft,
@@ -175,11 +176,19 @@ export function PlanTab({ project, choice, onStarted, goSpec }: { project: Proje
                   ))}
                 </div>
                 {a.checkCommand && <div className="muted small mono">✓ {a.checkCommand}</div>}
-                {!running && (
+                {!running && confirmDelete === a.id ? (
                   <div className="card-actions">
-                    <button className="link" onClick={() => setEditAgent(a.id)}>Изменить</button>
-                    <button className="link danger" onClick={() => removeAgent(a.id)} disabled={draft.agents.length === 1}>Удалить</button>
+                    <span className="small grow">Удалить вместе с задачами ({draft.tasks.filter((t) => t.agentId === a.id).length})?</span>
+                    <button className="link" onClick={() => setConfirmDelete(null)}>Нет</button>
+                    <button className="link danger" onClick={() => removeAgent(a.id)}>Удалить</button>
                   </div>
+                ) : (
+                  !running && (
+                    <div className="card-actions">
+                      <button className="link" onClick={() => setEditAgent(a.id)}>Изменить</button>
+                      <button className="link danger" onClick={() => setConfirmDelete(a.id)} disabled={draft.agents.length === 1}>Удалить</button>
+                    </div>
+                  )
                 )}
               </div>
             ),

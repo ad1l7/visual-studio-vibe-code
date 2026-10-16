@@ -1,11 +1,6 @@
-import { reduce, type RunEvent, type RunSnapshot } from '@vibe/core/shared';
+import { reduce, type RunSnapshot } from '@vibe/core/shared';
 import { useCallback, useEffect, useState } from 'react';
-import { api, projectUrl, type Plan, type ProjectDetails } from './api.ts';
-
-type StreamMessage =
-  | { type: 'hello'; snapshot: RunSnapshot | null; running: boolean }
-  | { type: 'run-event'; event: RunEvent }
-  | { type: 'planner'; text: string };
+import { api, projectUrl, subscribeProject, type Plan, type ProjectDetails } from './api.ts';
 
 /** Данные проекта + живые события запуска по SSE. */
 export function useProject(name: string) {
@@ -27,9 +22,7 @@ export function useProject(name: string) {
 
   useEffect(() => {
     void reload();
-    const es = new EventSource(projectUrl(name, '/events'));
-    es.onmessage = (msg) => {
-      const m = JSON.parse(msg.data) as StreamMessage;
+    return subscribeProject(name, (m) => {
       if (m.type === 'hello') {
         setSnapshot(m.snapshot);
         setRunning(m.running);
@@ -39,8 +32,7 @@ export function useProject(name: string) {
       } else if (m.type === 'planner') {
         setPlannerLog((l) => [...l.slice(-30), m.text]);
       }
-    };
-    return () => es.close();
+    });
   }, [name, reload]);
 
   const setPlan = useCallback((plan: Plan | null) => setDetails((d) => (d ? { ...d, plan } : d)), []);

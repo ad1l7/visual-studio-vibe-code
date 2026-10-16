@@ -9,13 +9,16 @@ import { useProject } from './useProject.ts';
 
 type Tab = 'spec' | 'plan' | 'run' | 'files';
 
+// В демо-версии (страница внутри чужого окна) не трогаем адресную строку.
+const HASH_ROUTING = !__VIBE_DEMO__;
+
 function readHash(): { project?: string; tab: Tab } {
   const [project, tab] = decodeURIComponent(location.hash.slice(1)).split('/');
   return { project: project || undefined, tab: (['spec', 'plan', 'run', 'files'] as Tab[]).includes(tab as Tab) ? (tab as Tab) : 'spec' };
 }
 
 export function App() {
-  const [route, setRoute] = useState(readHash);
+  const [route, setRoute] = useState<{ project?: string; tab: Tab }>(() => (HASH_ROUTING ? readHash() : { tab: 'spec' }));
   const [engines, setEngines] = useState<EngineInfo[]>([]);
   const [choice, setChoice] = useState<EngineChoice>(() => {
     try {
@@ -26,6 +29,7 @@ export function App() {
   });
 
   useEffect(() => {
+    if (!HASH_ROUTING) return;
     const onHash = () => setRoute(readHash());
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
@@ -48,6 +52,7 @@ export function App() {
   }, [choice]);
 
   const go = (project?: string, tab: Tab = 'spec') => {
+    if (!HASH_ROUTING) return setRoute({ project, tab });
     location.hash = project ? `${encodeURIComponent(project)}/${tab}` : '';
   };
 
@@ -61,6 +66,11 @@ export function App() {
         <div className="spacer" />
         <EnginePicker engines={engines} choice={choice} onChange={setChoice} />
       </header>
+      {__VIBE_DEMO__ && (
+        <div className="demo-banner">
+          <strong>Демо-версия.</strong> Планировщик и агенты здесь имитируются в браузере, код не пишется. Настоящих агентов Claude Code студия запускает у вас на компьютере: <code>pnpm studio</code>.
+        </div>
+      )}
       {route.project ? (
         <ProjectView key={route.project} name={route.project} tab={route.tab} go={(t) => go(route.project, t)} choice={choice} />
       ) : (

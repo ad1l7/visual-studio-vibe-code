@@ -4,12 +4,22 @@ import type { Clarification, PlanInput } from '../plan/schema.ts';
  * Типовая команда для веб-приложения. Используется mock-движком (демо и тесты)
  * и как пример формата плана в промпте планировщика.
  */
+/** Обрезает по границе слова. */
+function clip(s: string, max: number): string {
+  const t = s.replace(/\s+/g, ' ').trim();
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max);
+  const space = cut.lastIndexOf(' ');
+  return `${(space > max * 0.5 ? cut.slice(0, space) : cut).replace(/[,.:;—-]+$/, '')}…`;
+}
+
 export function templatePlan(spec: string): PlanInput {
-  const firstLine = spec.trim().split(/\n/)[0] ?? 'Новый проект';
+  const firstLine = spec.trim().split(/\n/)[0] ?? '';
+  const firstSentence = firstLine.split(/[.:!?]/)[0] ?? firstLine;
   return {
     project: {
-      name: firstLine.slice(0, 60) || 'Новый проект',
-      summary: `Веб-приложение по ТЗ: ${firstLine.slice(0, 200)}`,
+      name: clip(firstSentence, 48) || 'Новый проект',
+      summary: clip(spec.split('\n\nУточнения')[0] ?? spec, 320) || 'Веб-приложение',
       stack: {
         frontend: 'React + Vite + TypeScript',
         backend: 'Node.js + Fastify + TypeScript',

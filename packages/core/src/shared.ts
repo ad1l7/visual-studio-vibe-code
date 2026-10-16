@@ -4,3 +4,5 @@ export { parsePlan, topoOrder, dependentsOf, PlanError } from './plan/validate.t
 export * from './orchestrator/state.ts';
 export { plural } from './util/plural.ts';
 export type { AgentEvent, AgentResult, EngineInfo, PermissionMode } from './runners/types.ts';
+export { renderAgentsMd, renderAgentFile } from './scaffold/render.ts';
+export { templatePlan, templateClarification } from './planner/template.ts';
