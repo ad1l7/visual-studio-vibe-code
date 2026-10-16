@@ -7,6 +7,7 @@ import type { AgentResult, AgentRunner, PermissionMode, RunMeta } from '../runne
 import { scaffoldProject } from '../scaffold/scaffold.ts';
 import { newRunId, ProjectStore } from '../storage.ts';
 import { Mutex } from '../util/mutex.ts';
+import { plural } from '../util/plural.ts';
 import { execCapture } from '../util/process.ts';
 import { changedFiles, commitAll } from '../workspace/git.ts';
 import type { TaskWorktree, Workspace } from '../workspace/worktrees.ts';
@@ -97,7 +98,7 @@ export class Orchestrator {
 
   async start(): Promise<RunSnapshot> {
     await this.store.createRun(this.runId);
-    this.emit({ type: 'run', ts: Date.now(), status: 'running', message: `Запуск ${this.runId}: ${this.plan.tasks.length} задач, ${this.plan.agents.length} агентов` });
+    this.emit({ type: 'run', ts: Date.now(), status: 'running', message: `Запуск ${this.runId}: ${plural(this.plan.tasks.length, ['задача', 'задачи', 'задач'])}, ${plural(this.plan.agents.length, ['агент', 'агента', 'агентов'])}` });
     try {
       this.ws = await scaffoldProject(this.o.projectDir, this.plan);
       await this.schedule();
@@ -142,7 +143,7 @@ export class Orchestrator {
     const status = this.stopped ? 'stopped' : done === all.length ? 'done' : 'failed';
     const message =
       status === 'done'
-        ? `Готово: все ${all.length} задач выполнены и влиты в main`
+        ? `Готово: все задачи (${all.length}) выполнены и влиты в main`
         : status === 'stopped'
           ? `Остановлено: выполнено ${done} из ${all.length}`
           : `Завершено с ошибками: выполнено ${done} из ${all.length}`;
@@ -166,7 +167,7 @@ export class Orchestrator {
       const files = await this.integrate(task, agent, runner, wt);
       merged = true;
       this.patch(task.id, { status: 'done', finishedAt: Date.now(), files });
-      this.log('success', `«${task.title}» готово и влито в main (${files.length} файлов)`, task.id);
+      this.log('success', `«${task.title}» готово и влито в main (${plural(files.length, ['файл', 'файла', 'файлов'])})`, task.id);
     } catch (err) {
       const cancelled = err instanceof Cancelled || this.stopped;
       this.patch(task.id, { status: cancelled ? 'cancelled' : 'failed', finishedAt: Date.now(), error: cancelled ? undefined : errorText(err) });

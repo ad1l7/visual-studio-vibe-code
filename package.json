@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.28.0",
-  "engines": { "node": ">=20" },
+  "engines": { "node": ">=20.11" },
   "scripts": {
     "vibe": "tsx apps/cli/src/index.ts",
     "studio": "pnpm --filter @vibe/studio build && tsx apps/studio/server/index.ts",
