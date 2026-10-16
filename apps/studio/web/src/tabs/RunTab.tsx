@@ -2,6 +2,8 @@ import { plural, type TaskState, type TaskStatus } from '@vibe/core/shared';
 import { useEffect, useRef, useState } from 'react';
 import { api, projectUrl, type EngineChoice } from '../api.ts';
 import type { ProjectHook } from '../App.tsx';
+import { RotateCcw, Square, Timer, X } from 'lucide-react';
+import { AgentAvatar } from '../ui/display.tsx';
 import { AGENT_STATUS, agentColor, formatDuration, formatTime, RUN_STATUS, TASK_STATUS } from '../labels.ts';
 
 const COLUMNS: { title: string; statuses: TaskStatus[] }[] = [
@@ -58,19 +60,19 @@ export function RunTab({ project, choice, goPlan }: { project: ProjectHook; choi
     <div className="run">
       <section className="run-head card">
         <span className={`badge ${s.status}`}>{RUN_STATUS[s.status]}</span>
-        <div className="progress">
+        <div className="progress-old">
           <div className="progress-bar" style={{ width: `${(done / Math.max(1, tasks.length)) * 100}%` }} />
         </div>
         <span>
           <strong>{done}</strong> из {plural(tasks.length, ['задача', 'задачи', 'задач'])}
         </span>
-        <span className="muted">⏱ {formatDuration(elapsed)}</span>
+        <span className="muted"><Timer size={14} aria-hidden /> {formatDuration(elapsed)}</span>
         <span className="muted" title="Оценка стоимости по данным CLI (при подписке списывается из лимитов)">≈ ${s.costUsd.toFixed(2)}</span>
         <div className="spacer" />
         {running ? (
-          <button className="danger-btn" onClick={stop}>■ Остановить</button>
+          <button className="danger-btn" onClick={stop}><Square size={14} fill="currentColor" aria-hidden /> Остановить</button>
         ) : (
-          <button className="ghost" onClick={restart}>↻ Запустить снова</button>
+          <button className="ghost" onClick={restart}><RotateCcw size={14} aria-hidden /> Запустить снова</button>
         )}
       </section>
       {error && <div className="error">{error}</div>}
@@ -86,13 +88,13 @@ export function RunTab({ project, choice, goPlan }: { project: ProjectHook; choi
               title="Показать только события этого агента"
             >
               <div className="agent-head">
-                <span className={`avatar ${a.status === 'working' ? 'pulse' : ''}`} style={{ background: agentColor(a.id) }}>{a.role[0]}</span>
+                <AgentAvatar agent={a} size={28} pulse={a.status === 'working'} />
                 <div>
                   <strong>{a.role}</strong>
                   <div className={`small status-${a.status}`}>{AGENT_STATUS[a.status]}</div>
                 </div>
               </div>
-              {current && <div className="small">📌 {current.title}</div>}
+              {current && <div className="small">{current.title}</div>}
               {a.status === 'working' && a.lastAction && <div className="muted small mono clamp">{a.lastAction}</div>}
             </button>
           );
@@ -118,7 +120,7 @@ export function RunTab({ project, choice, goPlan }: { project: ProjectHook; choi
 
         <section className="feed card">
           <div className="feed-title">
-            Лента событий {agentFilter && <button className="chip small selected" onClick={() => setAgentFilter(null)}>{s.agents[agentFilter]?.role} ✕</button>}
+            Лента событий {agentFilter && <button className="chip small selected" onClick={() => setAgentFilter(null)}>{s.agents[agentFilter]?.role} <X size={12} aria-hidden /></button>}
           </div>
           <div
             className="feed-list"
@@ -172,7 +174,7 @@ function TaskDetails({ task: t, role, onClose }: { task: TaskState; role: string
         <div className="row">
           <h3>{t.title}</h3>
           <div className="spacer" />
-          <button className="link" onClick={onClose}>✕</button>
+          <button className="link" onClick={onClose} aria-label="Закрыть"><X size={16} aria-hidden /></button>
         </div>
         <div className="muted small">
           {role} · {TASK_STATUS[t.status]} · попыток: {t.attempts}

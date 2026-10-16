@@ -11,7 +11,8 @@ execFileSync('npx', ['vite', 'build', '--mode', 'demo', '--logLevel', 'warn'], {
 const dist = join(root, 'web', 'dist-demo');
 const js = readFileSync(join(dist, 'app.js'), 'utf8').replace(/<\/script/gi, '<\\/script');
 const css = readFileSync(join(dist, 'app.css'), 'utf8').replace(/<\/style/gi, '<\\/style');
-const html = `<title>Vibe Studio</title>
+const html = `<meta charset="utf-8">
+<title>Vibe Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>${css}</style>
 <div id="root"></div>

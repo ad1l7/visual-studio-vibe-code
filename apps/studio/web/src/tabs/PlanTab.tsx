@@ -2,7 +2,11 @@ import { plural, type AgentSpec, type TaskSpec } from '@vibe/core/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { api, projectUrl, type EngineChoice, type Plan } from '../api.ts';
 import type { ProjectHook } from '../App.tsx';
+import { Check, Folder, Lightbulb, Play } from 'lucide-react';
 import { agentColor, STACK_LABELS } from '../labels.ts';
+import { Button } from '../ui/Button.tsx';
+import { AgentAvatar } from '../ui/display.tsx';
+import { ConfirmPopover } from '../ui/overlay.tsx';
 
 /** Номер «волны» задачи: задачи одной волны агенты делают параллельно. */
 function waves(plan: Plan): TaskSpec[][] {
@@ -40,7 +44,6 @@ export function PlanTab({ project, choice, onStarted, goSpec }: { project: Proje
   const [attempts, setAttempts] = useState(2);
   const [fullAccess, setFullAccess] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (!dirty) setDraft(details?.plan ?? null);
@@ -95,7 +98,6 @@ export function PlanTab({ project, choice, onStarted, goSpec }: { project: Proje
 
   const removeAgent = (id: string) => {
     const tasks = draft.tasks.filter((t) => t.agentId === id);
-    setConfirmDelete(null);
     const removed = new Set(tasks.map((t) => t.id));
     update({
       ...draft,
@@ -135,7 +137,7 @@ export function PlanTab({ project, choice, onStarted, goSpec }: { project: Proje
               </div>
             ))}
         </div>
-        {info.stackReasoning && <p className="muted small">💡 {info.stackReasoning}</p>}
+        {info.stackReasoning && <p className="muted small"><Lightbulb size={14} aria-hidden /> {info.stackReasoning}</p>}
       </section>
 
       <section>
@@ -161,7 +163,7 @@ export function PlanTab({ project, choice, onStarted, goSpec }: { project: Proje
             ) : (
               <div key={a.id} className="agent-card card">
                 <div className="agent-head">
-                  <span className="avatar" style={{ background: agentColor(a.id) }}>{a.role[0]}</span>
+                  <AgentAvatar agent={a} size={28} />
                   <div>
                     <strong>{a.role}</strong>
                     <div className="muted small mono">{a.id}</div>
@@ -172,23 +174,20 @@ export function PlanTab({ project, choice, onStarted, goSpec }: { project: Proje
                 <p className="small">{a.description}</p>
                 <div className="chips">
                   {a.scope.map((s) => (
-                    <span key={s} className="chip mono small">📁 {s}</span>
+                    <span key={s} className="chip mono small"><Folder size={14} aria-hidden /> {s}</span>
                   ))}
                 </div>
-                {a.checkCommand && <div className="muted small mono">✓ {a.checkCommand}</div>}
-                {!running && confirmDelete === a.id ? (
+                {a.checkCommand && <div className="muted small mono"><Check size={14} aria-hidden /> {a.checkCommand}</div>}
+                {!running && (
                   <div className="card-actions">
-                    <span className="small grow">Удалить вместе с задачами ({draft.tasks.filter((t) => t.agentId === a.id).length})?</span>
-                    <button className="link" onClick={() => setConfirmDelete(null)}>Нет</button>
-                    <button className="link danger" onClick={() => removeAgent(a.id)}>Удалить</button>
+                    <button className="link" onClick={() => setEditAgent(a.id)}>Изменить</button>
+                    <ConfirmPopover
+                      spec={{ title: `Удалить «${a.role}»?`, text: `Вместе с ним удалятся его задачи: ${draft.tasks.filter((t) => t.agentId === a.id).length}`, confirmLabel: 'Удалить', tone: 'danger' }}
+                      onConfirm={() => removeAgent(a.id)}
+                    >
+                      {(t) => <Button {...t} size="sm" variant="ghost" disabled={draft.agents.length === 1}>Удалить</Button>}
+                    </ConfirmPopover>
                   </div>
-                ) : (
-                  !running && (
-                    <div className="card-actions">
-                      <button className="link" onClick={() => setEditAgent(a.id)}>Изменить</button>
-                      <button className="link danger" onClick={() => setConfirmDelete(a.id)} disabled={draft.agents.length === 1}>Удалить</button>
-                    </div>
-                  )
                 )}
               </div>
             ),
@@ -263,7 +262,7 @@ export function PlanTab({ project, choice, onStarted, goSpec }: { project: Proje
             </button>
           )}
           <button className="primary big launch-btn" onClick={launch} disabled={busy || running}>
-            {running ? 'Агенты уже работают' : '▶ Запустить агентов'}
+            {running ? 'Агенты уже работают' : <><Play size={16} aria-hidden /> Запустить агентов</>}
           </button>
         </div>
       </section>

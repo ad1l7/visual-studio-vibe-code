@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { ChevronDown, ChevronRight, File, Folder, FolderOpen, RefreshCw } from 'lucide-react';
 import { api, projectUrl, type TreeNode } from '../api.ts';
 
 export function FilesTab({ name, refreshKey }: { name: string; refreshKey: number }) {
@@ -37,7 +38,7 @@ export function FilesTab({ name, refreshKey }: { name: string; refreshKey: numbe
           style={{ paddingLeft: 8 + depth * 14 }}
           onClick={() => (n.dir ? toggle(n.path) : void show(n.path))}
         >
-          {n.dir ? (open.has(n.path) ? '▾ 📂' : '▸ 📁') : '  📄'} {n.name}
+          {n.dir ? (open.has(n.path) ? <><ChevronDown size={14} aria-hidden /> <FolderOpen size={14} aria-hidden /></> : <><ChevronRight size={14} aria-hidden /> <Folder size={14} aria-hidden /></>) : <><span style={{ display: 'inline-block', width: 14 }} /> <File size={14} aria-hidden /></>} {n.name}
         </button>
         {n.dir && open.has(n.path) && n.children && render(n.children, depth + 1)}
       </div>
@@ -49,7 +50,7 @@ export function FilesTab({ name, refreshKey }: { name: string; refreshKey: numbe
         <div className="row">
           <strong>Проект</strong>
           <div className="spacer" />
-          <button className="link" onClick={load} title="Обновить">↻</button>
+          <button className="link" onClick={load} aria-label="Обновить список файлов" data-tip="Обновить список файлов"><RefreshCw size={14} aria-hidden /></button>
         </div>
         {error && <div className="error small">{error}</div>}
         {tree === null ? <div className="muted small">Загрузка…</div> : tree.length === 0 ? <div className="muted small">Пусто</div> : render(tree, 0)}

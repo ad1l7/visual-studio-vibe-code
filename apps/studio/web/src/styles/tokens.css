@@ -1,0 +1,234 @@
+/* Дизайн-токены Vibe Studio. Цвета задаются только здесь. */
+
+:root {
+  /* Поверхности и текст — тёмная тема (основная) */
+  --bg: #0e0f14;
+  --surface-1: #15161d;
+  --surface-2: #1c1d27;
+  --surface-3: #252633;
+  --border: #2c2d3b;
+  --border-strong: #3b3c4e;
+  --text: #ececf3;
+  --text-2: #a3a4b8;
+  --text-3: #80829a;
+  --accent: #6d4ff2;
+  --accent-hover: #7d62ff;
+  --accent-soft: rgb(139 116 255 / .16);
+  --accent-text: #ab98ff;
+  --on-accent: #ffffff;
+  --on-danger: #1a0b0b;
+  --focus-ring: #8f78ff;
+  --overlay: rgb(5 6 10 / .55);
+  --overlay-soft: rgb(0 0 0 / .35);
+  --tooltip-bg: #ececf3;
+  --tooltip-fg: #0e0f14;
+
+  /* Статусы */
+  --ok: #4ad295;
+  --ok-soft: rgb(74 210 149 / .14);
+  --info: #6cb2ff;
+  --info-soft: rgb(108 178 255 / .14);
+  --warn: #f2b84f;
+  --warn-soft: rgb(242 184 79 / .14);
+  --bad: #ff7a7a;
+  --bad-soft: rgb(255 122 122 / .14);
+  --neutral: #9a9cb0;
+  --neutral-soft: rgb(154 156 176 / .14);
+
+  /* Цвета агентов */
+  --agent-0: #b39dff;
+  --agent-1: #6cc4ff;
+  --agent-2: #5fd6a0;
+  --agent-3: #f4b860;
+  --agent-4: #f58fc4;
+  --agent-5: #a8d86a;
+  --agent-6: #ff8f7a;
+  --agent-7: #5fd3d3;
+
+  /* Тени */
+  --shadow-1: 0 1px 2px rgb(0 0 0 / .35);
+  --shadow-2: 0 8px 24px rgb(0 0 0 / .45), 0 0 0 1px var(--border-strong);
+  --shadow-3: 0 16px 48px rgb(0 0 0 / .55);
+
+  color-scheme: dark;
+}
+
+/* Светлая тема: по системе (если не выбрана тёмная явно) или явным выбором. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f6f6fa;
+    --surface-1: #ffffff;
+    --surface-2: #f0f0f6;
+    --surface-3: #e7e7f0;
+    --border: #dcdce7;
+    --border-strong: #c5c6d6;
+    --text: #191a24;
+    --text-2: #5b5d70;
+    --text-3: #696b80;
+    --accent: #6d4ff2;
+    --accent-hover: #5d3fe0;
+    --accent-soft: rgb(109 79 242 / .10);
+    --accent-text: #5a3be0;
+    --on-danger: #ffffff;
+    --focus-ring: #6d4ff2;
+    --overlay: rgb(25 26 36 / .35);
+    --overlay-soft: rgb(25 26 36 / .25);
+    --tooltip-bg: #191a24;
+    --tooltip-fg: #f6f6fa;
+    --ok: #0f7a4b;
+    --ok-soft: rgb(15 122 75 / .10);
+    --info: #1b62c0;
+    --info-soft: rgb(27 98 192 / .10);
+    --warn: #935600;
+    --warn-soft: rgb(147 86 0 / .10);
+    --bad: #c02a27;
+    --bad-soft: rgb(192 42 39 / .09);
+    --neutral: #646678;
+    --neutral-soft: rgb(100 102 120 / .10);
+    --agent-0: #6a45e8;
+    --agent-1: #1769b8;
+    --agent-2: #0f7d55;
+    --agent-3: #9a5a00;
+    --agent-4: #b8337a;
+    --agent-5: #4f7a12;
+    --agent-6: #c0392b;
+    --agent-7: #0e7a7a;
+    --shadow-1: 0 1px 2px rgb(25 26 36 / .06);
+    --shadow-2: 0 8px 24px rgb(25 26 36 / .12), 0 0 0 1px var(--border);
+    --shadow-3: 0 16px 48px rgb(25 26 36 / .18);
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f6f6fa;
+  --surface-1: #ffffff;
+  --surface-2: #f0f0f6;
+  --surface-3: #e7e7f0;
+  --border: #dcdce7;
+  --border-strong: #c5c6d6;
+  --text: #191a24;
+  --text-2: #5b5d70;
+  --text-3: #696b80;
+  --accent: #6d4ff2;
+  --accent-hover: #5d3fe0;
+  --accent-soft: rgb(109 79 242 / .10);
+  --accent-text: #5a3be0;
+  --on-danger: #ffffff;
+  --focus-ring: #6d4ff2;
+  --overlay: rgb(25 26 36 / .35);
+  --overlay-soft: rgb(25 26 36 / .25);
+  --tooltip-bg: #191a24;
+  --tooltip-fg: #f6f6fa;
+  --ok: #0f7a4b;
+  --ok-soft: rgb(15 122 75 / .10);
+  --info: #1b62c0;
+  --info-soft: rgb(27 98 192 / .10);
+  --warn: #935600;
+  --warn-soft: rgb(147 86 0 / .10);
+  --bad: #c02a27;
+  --bad-soft: rgb(192 42 39 / .09);
+  --neutral: #646678;
+  --neutral-soft: rgb(100 102 120 / .10);
+  --agent-0: #6a45e8;
+  --agent-1: #1769b8;
+  --agent-2: #0f7d55;
+  --agent-3: #9a5a00;
+  --agent-4: #b8337a;
+  --agent-5: #4f7a12;
+  --agent-6: #c0392b;
+  --agent-7: #0e7a7a;
+  --shadow-1: 0 1px 2px rgb(25 26 36 / .06);
+  --shadow-2: 0 8px 24px rgb(25 26 36 / .12), 0 0 0 1px var(--border);
+  --shadow-3: 0 16px 48px rgb(25 26 36 / .18);
+  color-scheme: light;
+}
+
+:root {
+  --agent-0-bg: color-mix(in srgb, var(--agent-0) 18%, transparent);
+  --agent-1-bg: color-mix(in srgb, var(--agent-1) 18%, transparent);
+  --agent-2-bg: color-mix(in srgb, var(--agent-2) 18%, transparent);
+  --agent-3-bg: color-mix(in srgb, var(--agent-3) 18%, transparent);
+  --agent-4-bg: color-mix(in srgb, var(--agent-4) 18%, transparent);
+  --agent-5-bg: color-mix(in srgb, var(--agent-5) 18%, transparent);
+  --agent-6-bg: color-mix(in srgb, var(--agent-6) 18%, transparent);
+  --agent-7-bg: color-mix(in srgb, var(--agent-7) 18%, transparent);
+
+  /* Радиусы */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --r-full: 999px;
+
+  /* Типографика */
+  --font-sans: 'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --fs-11: 11px; --lh-11: 16px;
+  --fs-12: 12px; --lh-12: 16px;
+  --fs-13: 13px; --lh-13: 20px;
+  --fs-14: 14px; --lh-14: 22px;
+  --fs-15: 15px; --lh-15: 24px;
+  --fs-18: 18px; --lh-18: 26px;
+  --fs-22: 22px; --lh-22: 30px;
+
+  /* Отступы */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px; --s-12: 48px;
+
+  /* Размеры (обычная плотность) */
+  --gutter: 24px;
+  --section-gap: 24px;
+  --card-pad: 12px;
+  --row-h: 48px;
+  --task-h: 52px;
+  --tree-row: 26px;
+  --feed-row: 28px;
+  --control-sm: 28px;
+  --control-md: 32px;
+  --control-lg: 40px;
+  --actionbar-h: 56px;
+  --header-h: 52px;
+  --sidebar-w: 232px;
+  --rail-w: 56px;
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --pad-l: max(var(--gutter), var(--safe-l));
+  --pad-r: max(var(--gutter), var(--safe-r));
+
+  /* Анимации */
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 240ms;
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-in: cubic-bezier(.4, 0, 1, 1);
+
+  /* Слои */
+  --z-sticky: 5;
+  --z-drawer: 40;
+  --z-popover: 60;
+  --z-toast: 70;
+  --z-tooltip: 80;
+}
+
+:root[data-density="compact"] {
+  --gutter: 16px;
+  --section-gap: 16px;
+  --card-pad: 8px;
+  --row-h: 40px;
+  --task-h: 44px;
+  --tree-row: 24px;
+  --feed-row: 24px;
+  --control-md: 28px;
+  --control-lg: 36px;
+  --actionbar-h: 48px;
+  --sidebar-w: 216px;
+}
+
+@media (max-width: 767px) {
+  :root { --gutter: 16px; --header-h: 48px; }
+}
+
+@media (pointer: coarse) {
+  :root { --control-sm: 40px; --control-md: 40px; --control-lg: 44px; }
+}

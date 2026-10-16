@@ -1,3 +1,4 @@
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 import { api, projectUrl, type ClarifyQuestion, type EngineChoice, type Plan } from '../api.ts';
 import type { ProjectHook } from '../App.tsx';
@@ -74,7 +75,7 @@ export function SpecTab({ project, choice, onPlanned }: { project: ProjectHook; 
             </button>
           )}
           <button className="primary big" disabled={!spec.trim() || !!busy} onClick={start}>
-            {details?.plan ? 'Пересобрать план' : 'Подобрать команду агентов'} →
+            {details?.plan ? 'Пересобрать план' : 'Подобрать команду агентов'} <ArrowRight size={16} aria-hidden />
           </button>
         </div>
       )}
@@ -98,14 +99,14 @@ export function SpecTab({ project, choice, onPlanned }: { project: ProjectHook; 
           ))}
           <div className="row">
             <button className="ghost" onClick={() => setQuestions(null)} disabled={!!busy}>
-              ← Изменить ТЗ
+              <ArrowLeft size={16} aria-hidden /> Изменить ТЗ
             </button>
             <div className="spacer" />
             <button className="ghost" onClick={() => makePlan()} disabled={!!busy}>
               Пропустить вопросы
             </button>
             <button className="primary big" onClick={() => makePlan(questions, answers)} disabled={!!busy}>
-              Составить план →
+              Составить план <ArrowRight size={16} aria-hidden />
             </button>
           </div>
         </div>

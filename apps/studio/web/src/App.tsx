@@ -6,6 +6,7 @@ import { PlanTab } from './tabs/PlanTab.tsx';
 import { RunTab } from './tabs/RunTab.tsx';
 import { SpecTab } from './tabs/SpecTab.tsx';
 import { useProject } from './useProject.ts';
+import { ThemeMenu } from './shell/settings.tsx';
 
 type Tab = 'spec' | 'plan' | 'run' | 'files';
 
@@ -65,6 +66,7 @@ export function App() {
         {route.project && <span className="crumb">/ {route.project}</span>}
         <div className="spacer" />
         <EnginePicker engines={engines} choice={choice} onChange={setChoice} />
+        <ThemeMenu placement="bottom" />
       </header>
       {__VIBE_DEMO__ && (
         <div className="demo-banner">
@@ -97,7 +99,7 @@ function EnginePicker({ engines, choice, onChange }: { engines: EngineInfo[]; ch
         <select value={choice.model} onChange={(e) => onChange({ ...choice, model: e.target.value })} aria-label="Модель">
           {MODELS.map((m) => (
             <option key={m.id} value={m.id}>
-              {m.label}
+              {m.label} — {m.hint}
             </option>
           ))}
         </select>
@@ -177,7 +179,7 @@ function ProjectView({ name, tab, go, choice }: { name: string; tab: Tab; go: (t
   const tabs: [Tab, string, string?][] = [
     ['spec', '1. ТЗ'],
     ['plan', '2. Команда и план', details.plan ? `${details.plan.agents.length}` : undefined],
-    ['run', '3. Запуск', running ? '●' : undefined],
+    ['run', '3. Запуск', running ? 'live' : undefined],
     ['files', 'Файлы'],
   ];
 
@@ -187,7 +189,7 @@ function ProjectView({ name, tab, go, choice }: { name: string; tab: Tab; go: (t
         {tabs.map(([id, label, extra]) => (
           <button key={id} className={tab === id ? 'active' : ''} onClick={() => go(id)}>
             {label}
-            {extra && <span className={`tab-extra ${extra === '●' ? 'live' : ''}`}>{extra}</span>}
+            {extra && (extra === 'live' ? <span className="dot dot--running" style={{ marginLeft: 6 }} aria-label="идёт работа" /> : <span className="tab-extra">{extra}</span>)}
           </button>
         ))}
         <div className="spacer" />
