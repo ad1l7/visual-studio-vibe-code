@@ -32,7 +32,8 @@ export class ClaudeCodeRunner implements AgentRunner {
       if (code !== 0) return { ...base, available: false, hint: 'claude --version завершился с ошибкой' };
       return { ...base, available: true, version: stdout.trim() };
     } catch {
-      return { ...base, available: false, hint: 'Установите Claude Code: npm i -g @anthropic-ai/claude-code, затем выполните claude и войдите' };
+      const install = process.platform === 'win32' ? 'в PowerShell: irm https://claude.ai/install.ps1 | iex' : 'curl -fsSL https://claude.ai/install.sh | bash';
+      return { ...base, available: false, hint: `Установите Claude Code (${install}), затем выполните claude и войдите` };
     }
   }
 

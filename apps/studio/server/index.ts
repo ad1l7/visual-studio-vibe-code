@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
@@ -12,6 +13,7 @@ const { values } = parseArgs({
     port: { type: 'string', default: process.env.VIBE_PORT ?? '4317' },
     projects: { type: 'string', default: process.env.VIBE_PROJECTS_DIR ?? join(homedir(), 'VibeProjects') },
     dev: { type: 'boolean', default: false },
+    open: { type: 'boolean', default: false },
   },
 });
 
@@ -151,8 +153,15 @@ async function main() {
   });
 
   server.listen(PORT, HOST, () => {
-    console.log(`Vibe Studio: http://localhost:${PORT}`);
+    const url = `http://localhost:${PORT}`;
+    console.log(`Vibe Studio: ${url}`);
     console.log(`Папка проектов: ${projects.root}`);
+    console.log('Не закрывайте это окно, пока работаете в студии. Остановить: Ctrl+C.');
+    if (values.open) openBrowser(url);
+  });
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    console.error(err.code === 'EADDRINUSE' ? `Порт ${PORT} уже занят: возможно, студия уже запущена — откройте http://localhost:${PORT}` : err);
+    process.exit(1);
   });
 
   const shutdown = () => {
@@ -162,6 +171,12 @@ async function main() {
   };
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
+}
+
+function openBrowser(url: string) {
+  const [cmd, args] =
+    process.platform === 'win32' ? ['cmd', ['/c', 'start', '', url]] : process.platform === 'darwin' ? ['open', [url]] : ['xdg-open', [url]];
+  spawn(cmd, args as string[], { stdio: 'ignore', detached: true }).on('error', () => {}).unref();
 }
 
 void main();
