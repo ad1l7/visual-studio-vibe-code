@@ -1,0 +1,20 @@
+{
+  "name": "vibe-studio",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "vibe": "tsx apps/cli/src/index.ts",
+    "studio": "pnpm --filter @vibe/studio build && tsx apps/studio/server/index.ts",
+    "studio:dev": "pnpm --filter @vibe/studio dev",
+    "test": "vitest run",
+    "typecheck": "tsc -p packages/core && tsc -p apps/cli && tsc -p apps/studio"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.3",
+    "vitest": "^5.0.5"
+  }
+}
