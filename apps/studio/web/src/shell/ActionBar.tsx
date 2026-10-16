@@ -8,7 +8,7 @@ import { useHotkey } from '../lib/hotkeys.ts';
 import { usePhone } from '../lib/media.ts';
 import { Button, IconButton } from '../ui/Button.tsx';
 import { Keys } from '../ui/display.tsx';
-import { ConfirmLayer, Menu, usePopover, type ConfirmSpec } from '../ui/overlay.tsx';
+import { ConfirmLayer, Menu, Popover, usePopover, type ConfirmSpec } from '../ui/overlay.tsx';
 
 export interface Action {
   label: string;
@@ -24,6 +24,8 @@ export interface Action {
   loading?: boolean;
   /** Показывать сочетание клавиш рядом с подписью (только десктоп). */
   hotkey?: string;
+  /** Кнопка открывает поповер с этим содержимым. */
+  popover?: { label: string; content: ReactNode; width?: number };
 }
 
 export interface ActionBarProps {
@@ -86,13 +88,13 @@ function ActionButton({ action: a, main, iconOnly, buttonRef }: { action: Action
     (p.ref as (el: HTMLButtonElement | null) => void)(el);
     buttonRef?.(el);
   };
-  const onClick = () => (a.confirm ? p.toggle() : a.onClick());
+  const onClick = () => (a.confirm || a.popover ? p.toggle() : a.onClick());
   const tip = a.disabled ? a.disabledReason : a.tip;
   const variant = main ? (a.tone === 'danger' ? 'danger-outline' : 'primary') : a.tone === 'danger' ? 'danger-outline' : 'secondary';
   return (
     <>
       {iconOnly && a.icon && !main ? (
-        <IconButton ref={setRef} icon={a.icon} label={a.label} size="lg" variant="secondary" disabled={a.disabled} onClick={onClick} aria-haspopup={a.confirm ? 'dialog' : undefined} />
+        <IconButton ref={setRef} icon={a.icon} label={a.label} size="lg" variant="secondary" disabled={a.disabled} onClick={onClick} aria-haspopup={a.confirm || a.popover ? 'dialog' : undefined} aria-expanded={a.confirm || a.popover ? p.open : undefined} />
       ) : (
         <Button
           ref={setRef}
@@ -106,8 +108,8 @@ function ActionButton({ action: a, main, iconOnly, buttonRef }: { action: Action
           tip={tip}
           onClick={onClick}
           className={main ? 'actionbar__primary' : undefined}
-          aria-haspopup={a.confirm ? 'dialog' : undefined}
-          aria-expanded={a.confirm ? p.open : undefined}
+          aria-haspopup={a.confirm || a.popover ? 'dialog' : undefined}
+          aria-expanded={a.confirm || a.popover ? p.open : undefined}
         >
           {a.label}
           {main && a.hotkey && !a.disabled && (
@@ -118,6 +120,11 @@ function ActionButton({ action: a, main, iconOnly, buttonRef }: { action: Action
         </Button>
       )}
       {a.confirm && <ConfirmLayer spec={a.confirm} open={p.open} onClose={p.close} anchor={p.anchor} onConfirm={a.onClick} placement="top" align="end" />}
+      {a.popover && (
+        <Popover open={p.open} onClose={p.close} anchor={p.anchor} placement="top" align="end" width={a.popover.width ?? 360} label={a.popover.label}>
+          {a.popover.content}
+        </Popover>
+      )}
     </>
   );
 }

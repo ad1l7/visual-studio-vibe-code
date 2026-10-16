@@ -352,9 +352,9 @@ function ProjectHeaderBar({ title, path, steps, tab, onGo, onCopyPath }: { title
 function TabContent({ tab, project, draft, flow, name, goTab, choice }: { tab: Tab; project: ProjectHook; draft: PlanDraft; flow: SpecFlow; name: string; goTab: (t: Tab) => void; choice: ReturnType<typeof useEngine>['choice'] }) {
   const { snapshot } = project;
   if (tab === 'spec') return <SpecTab project={project} flow={flow} goPlan={() => goTab('plan')} />;
+  if (tab === 'plan') return <PlanTab project={project} draft={draft} choice={choice} onStarted={() => goTab('run')} goSpec={() => goTab('spec')} goRun={() => goTab('run')} />;
   return (
     <div className="page">
-      {tab === 'plan' && <PlanTab project={project} draft={draft} choice={choice} onStarted={() => goTab('run')} goSpec={() => goTab('spec')} />}
       {tab === 'run' && <RunTab project={project} choice={choice} goPlan={() => goTab('plan')} goFiles={() => goTab('files')} />}
       {tab === 'files' && <FilesTab name={name} refreshKey={snapshot ? Object.values(snapshot.tasks).filter((t) => t.status === 'done').length : 0} />}
     </div>

@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import { LoaderCircle } from 'lucide-react';
 import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'danger-outline';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'danger-outline' | 'danger-ghost';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'disabled'> {

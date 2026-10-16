@@ -24,6 +24,8 @@
 .btn--danger-outline { border-color: var(--bad); color: var(--bad); }
 .btn--danger-outline:hover { background: var(--bad-soft); }
 .btn--danger-ghost { color: var(--bad); }
+.btn--danger-ghost:hover { background: var(--bad-soft); }
+.btn--danger-ghost[aria-disabled] { color: var(--text-3); background: none; }
 .btn[aria-disabled] { cursor: not-allowed; }
 .btn--primary[aria-disabled], .btn--danger[aria-disabled] { background: var(--surface-3); color: var(--text-3); filter: none; }
 .btn--secondary[aria-disabled] { background: var(--surface-2); color: var(--text-3); border-color: var(--border); }
