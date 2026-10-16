@@ -167,6 +167,8 @@ function ProjectView({ name, tab, onProgress }: { name: string; tab: Tab; onProg
   const [leave, setLeave] = useState<null | (() => void)>(null);
   const tabRef = useRef(tab);
   tabRef.current = tab;
+  const [openTask, setOpenTask] = useState<string | null>(null);
+  const [planFocus, setPlanFocus] = useState<string | null>(null);
   const flow = useSpecFlow(project, { name, choice, isOnSpec: () => tabRef.current === 'spec', onPlanned: () => nav.go(name, 'plan'), openPlan: () => nav.go(name, 'plan') });
 
   // S1: новый шаг всегда открывается с начала.
@@ -194,6 +196,22 @@ function ProjectView({ name, tab, onProgress }: { name: string; tab: Tab; onProg
     onProgress(snapshot ? { name, done, total: tasks.length, running, failed: status === 'failed' } : undefined);
   }, [name, done, tasks.length, running, status, onProgress, snapshot]);
   useEffect(() => () => onProgress(undefined), [onProgress]);
+
+  // Тосты о ходе запуска: ошибка задачи и завершение (если пользователь не смотрит на дашборд).
+  const prevRun = useRef<{ runId: string; run: string; tasks: Record<string, string> } | null>(null);
+  useEffect(() => {
+    if (!snapshot) return;
+    const prev = prevRun.current;
+    if (prev && prev.runId === snapshot.runId) {
+      for (const t of Object.values(snapshot.tasks)) {
+        if (t.status === 'failed' && prev.tasks[t.id] !== 'failed')
+          toast({ tone: 'error', title: `Не получилось: «${t.title}»`, text: t.error?.split('\n')[0], action: { label: 'Открыть', onClick: () => { nav.go(name, 'run'); setOpenTask(t.id); } } });
+      }
+      if (snapshot.status === 'done' && prev.run !== 'done' && (tabRef.current !== 'run' || document.hidden))
+        toast({ tone: 'success', title: 'Готово! Все задачи выполнены', action: { label: 'Открыть результат', onClick: () => nav.go(name, 'files') } });
+    }
+    prevRun.current = { runId: snapshot.runId, run: snapshot.status, tasks: Object.fromEntries(Object.values(snapshot.tasks).map((t) => [t.id, t.status])) };
+  }, [snapshot]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Список проектов обновляем, когда меняется состояние этого проекта.
   const hasPlan = !!details?.plan;
@@ -265,7 +283,7 @@ function ProjectView({ name, tab, onProgress }: { name: string; tab: Tab; onProg
               <Skeleton lines={5} height={20} />
             </div>
           ) : (
-            <TabContent tab={tab} project={project} draft={draft} flow={flow} name={name} goTab={goTab} choice={choice} />
+            <TabContent tab={tab} project={project} draft={draft} flow={flow} name={name} goTab={goTab} choice={choice} view={{ openTask, setOpenTask, planFocus, setPlanFocus }} />
           )}
         </div>
         <div className="actionbar-slot" ref={setSlot} data-active={activeTasks || undefined} />
@@ -349,14 +367,38 @@ function ProjectHeaderBar({ title, path, steps, tab, onGo, onCopyPath }: { title
   );
 }
 
-function TabContent({ tab, project, draft, flow, name, goTab, choice }: { tab: Tab; project: ProjectHook; draft: PlanDraft; flow: SpecFlow; name: string; goTab: (t: Tab) => void; choice: ReturnType<typeof useEngine>['choice'] }) {
+interface ViewState {
+  openTask: string | null;
+  setOpenTask: (id: string | null) => void;
+  planFocus: string | null;
+  setPlanFocus: (id: string | null) => void;
+}
+
+function TabContent({ tab, project, draft, flow, name, goTab, choice, view }: { tab: Tab; project: ProjectHook; draft: PlanDraft; flow: SpecFlow; name: string; goTab: (t: Tab) => void; choice: ReturnType<typeof useEngine>['choice']; view: ViewState }) {
+  const nav = useNav();
   const { snapshot } = project;
   if (tab === 'spec') return <SpecTab project={project} flow={flow} goPlan={() => goTab('plan')} />;
-  if (tab === 'plan') return <PlanTab project={project} draft={draft} choice={choice} onStarted={() => goTab('run')} goSpec={() => goTab('spec')} goRun={() => goTab('run')} />;
+  if (tab === 'plan') return <PlanTab project={project} draft={draft} choice={choice} onStarted={() => goTab('run')} goSpec={() => goTab('spec')} goRun={() => goTab('run')} focusTask={view.planFocus} clearFocus={() => view.setPlanFocus(null)} />;
+  if (tab === 'run')
+    return (
+      <RunTab
+        project={project}
+        choice={choice}
+        goPlan={() => goTab('plan')}
+        goFiles={() => goTab('files')}
+        openTask={view.openTask}
+        setOpenTask={view.setOpenTask}
+        openFile={(path) => nav.go(name, 'files', { file: path })}
+        openInPlan={(id) => {
+          view.setPlanFocus(id);
+          view.setOpenTask(null);
+          goTab('plan');
+        }}
+      />
+    );
   return (
     <div className="page">
-      {tab === 'run' && <RunTab project={project} choice={choice} goPlan={() => goTab('plan')} goFiles={() => goTab('files')} />}
-      {tab === 'files' && <FilesTab name={name} refreshKey={snapshot ? Object.values(snapshot.tasks).filter((t) => t.status === 'done').length : 0} />}
+      <FilesTab name={name} refreshKey={snapshot ? Object.values(snapshot.tasks).filter((t) => t.status === 'done').length : 0} initialPath={nav.takePendingFile()} />
     </div>
   );
 }

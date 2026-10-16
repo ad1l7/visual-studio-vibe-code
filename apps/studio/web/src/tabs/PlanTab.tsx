@@ -20,7 +20,7 @@ type Editing = { kind: 'agent'; agent: AgentSpec; isNew: boolean } | { kind: 'ta
 
 const stagesWord = (n: number) => `${n} ${n % 10 === 1 && n % 100 !== 11 ? 'этап' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'этапа' : 'этапов'}`;
 
-export function PlanTab({ project, draft: planDraft, choice, onStarted, goSpec, goRun }: { project: ProjectHook; draft: PlanDraft; choice: EngineChoice; onStarted: () => void; goSpec: () => void; goRun: () => void }) {
+export function PlanTab({ project, draft: planDraft, choice, onStarted, goSpec, goRun, focusTask, clearFocus }: { project: ProjectHook; draft: PlanDraft; choice: EngineChoice; onStarted: () => void; goSpec: () => void; goRun: () => void; focusTask?: string | null; clearFocus?: () => void }) {
   const { details, running } = project;
   const { draft, dirty, update, save, reset, saving } = planDraft;
   const toast = useToast();
@@ -41,6 +41,14 @@ export function PlanTab({ project, draft: planDraft, choice, onStarted, goSpec, 
   );
 
   const columns = useMemo(() => (draft ? waves(draft) : []), [draft]);
+
+  // «Открыть в плане» из панели задачи на дашборде.
+  useEffect(() => {
+    if (!focusTask || !draft) return;
+    const t = draft.tasks.find((x) => x.id === focusTask);
+    if (t) setEditing({ kind: 'task', task: t, isNew: false });
+    clearFocus?.();
+  }, [focusTask]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!draft) {
     return (

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ChevronDown, ChevronRight, File, Folder, FolderOpen, RefreshCw } from 'lucide-react';
 import { api, projectUrl, type TreeNode } from '../api.ts';
 
-export function FilesTab({ name, refreshKey }: { name: string; refreshKey: number }) {
+export function FilesTab({ name, refreshKey, initialPath }: { name: string; refreshKey: number; initialPath?: string | null }) {
   const [tree, setTree] = useState<TreeNode[] | null>(null);
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [file, setFile] = useState<{ path: string; content: string; truncated: boolean } | null>(null);
@@ -19,6 +19,12 @@ export function FilesTab({ name, refreshKey }: { name: string; refreshKey: numbe
   }, [name]);
 
   useEffect(load, [load, refreshKey]);
+  useEffect(() => {
+    if (!initialPath) return;
+    void show(initialPath);
+    const parts = initialPath.split('/');
+    setOpen((o) => new Set([...o, ...parts.slice(0, -1).map((_, i) => parts.slice(0, i + 1).join('/'))]));
+  }, [initialPath]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const show = (path: string) =>
     api<{ path: string; content: string; truncated: boolean }>(projectUrl(name, `/file?path=${encodeURIComponent(path)}`)).then(setFile, (e: Error) => setError(e.message));
