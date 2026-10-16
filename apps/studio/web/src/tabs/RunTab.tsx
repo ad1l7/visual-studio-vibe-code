@@ -1,5 +1,5 @@
 import type { RunSnapshot, TaskState, TaskStatus } from '@vibe/core/shared';
-import { ArrowRight, CircleCheck, CircleStop, FileText, MessageSquareText, PanelRightOpen, Pencil, RotateCcw, Rocket, Square, TriangleAlert } from 'lucide-react';
+import { ArrowRight, CircleCheck, CircleStop, FileText, MessageSquareText, Pencil, RotateCcw, Rocket, Square, TriangleAlert } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { api, projectUrl, type EngineChoice } from '../api.ts';
 import type { ProjectHook } from '../App.tsx';
@@ -11,7 +11,7 @@ import { ActionBar, type Action } from '../shell/ActionBar.tsx';
 import { Button } from '../ui/Button.tsx';
 import { AgentAvatar, EmptyState, ProgressBar, StatusPill } from '../ui/display.tsx';
 import { Segmented } from '../ui/form.tsx';
-import { ConfirmPopover, Drawer, type ConfirmSpec } from '../ui/overlay.tsx';
+import { Drawer, type ConfirmSpec } from '../ui/overlay.tsx';
 import { useToast } from '../ui/toast.tsx';
 import { FeedPanel } from './RunFeed.tsx';
 import { useNow } from './SpecTab.tsx';
@@ -52,7 +52,7 @@ export function RunTab({ project, choice, goPlan, goFiles, openTask, setOpenTask
   const toast = useToast();
   const [settings] = useRunSettings();
   const [agentFilter, setAgentFilter] = useState<string | null>(null);
-  const [feedDock, setFeedDock] = useLocalSetting<'open' | 'closed'>('vibe.feed', 'open');
+  const [feedDock, setFeedDock] = useLocalSetting<'open' | 'closed'>('vibe.feed', typeof window !== 'undefined' && window.innerWidth >= 1440 ? 'open' : 'closed');
   const [feedOverlay, setFeedOverlay] = useState(false);
   const [seenFeed, setSeenFeed] = useState(0);
   const [showProblems, setShowProblems] = useState(0);
@@ -80,11 +80,12 @@ export function RunTab({ project, choice, goPlan, goFiles, openTask, setOpenTask
   const tasks = Object.values(s.tasks);
   const total = tasks.length;
   const done = tasks.filter((t) => t.status === 'done').length;
-  const failed = tasks.filter((t) => t.status === 'failed' || t.status === 'blocked');
   const elapsed = (s.finishedAt ?? now) - s.startedAt;
   const order = boardOrder(s);
   const task = openTask ? s.tasks[openTask] : undefined;
   const unread = Math.max(0, feedLen - seenFeed);
+  const finished = !running && (s.status === 'done' || s.status === 'failed' || s.status === 'stopped');
+  const filesTouched = new Set(tasks.flatMap((t) => t.files.map((f) => f.path))).size;
 
   const stop = () =>
     api(projectUrl(details!.name, '/stop'), { body: {} }).then(
@@ -98,33 +99,41 @@ export function RunTab({ project, choice, goPlan, goFiles, openTask, setOpenTask
     );
 
   const feedButton: Action = { label: unread && !feedVisible ? `Лента · ${unread}` : 'Лента', icon: MessageSquareText, onClick: toggleFeed, tip: 'Лента событий (L)' };
+  // Лента открывается кнопкой в панели действий, когда она не видна.
+  const feedAction = feedVisible ? [] : [feedButton];
   let bar: { hint: string; hintTone?: 'ok' | 'bad' | 'warn'; secondary?: Action[]; primary?: Action };
-  if (running) {
-    bar = { hint: describeRun(s), secondary: wide ? [] : [feedButton], primary: { label: 'Остановить', icon: Square, iconFill: true, tone: 'danger', onClick: () => void stop(), confirm: STOP_CONFIRM } };
+  if (running || !finished) {
+    // Фраза «что происходит» уже есть в строке статуса — здесь только короткий итог.
+    bar = { hint: `${done} из ${tasksWord(total)} · ${formatDuration(elapsed)}`, secondary: feedAction, primary: { label: 'Остановить', icon: Square, iconFill: true, tone: 'danger', onClick: () => void stop(), confirm: STOP_CONFIRM, disabled: !running, disabledReason: 'Агенты ещё не начали работу' } };
   } else if (s.status === 'done') {
-    bar = { hint: `Готово за ${formatDurationShort(elapsed)} · ${done} из ${tasksWord(total)}`, hintTone: 'ok', secondary: [{ label: 'Запустить заново', icon: RotateCcw, onClick: () => void restart(), confirm: RESTART_CONFIRM }], primary: { label: 'Открыть результат', iconRight: ArrowRight, onClick: goFiles, hotkey: 'mod+enter' } };
+    bar = { hint: `Создано и изменено ${filesWord(filesTouched)} · чтобы что-то поменять, исправьте план`, hintTone: 'ok', secondary: [...feedAction, { label: 'Запустить заново', icon: RotateCcw, onClick: () => void restart(), confirm: RESTART_CONFIRM }], primary: { label: 'Открыть результат', iconRight: ArrowRight, onClick: goFiles, hotkey: 'mod+enter' } };
   } else if (s.status === 'failed') {
     bar = {
-      hint: `Не получилось ${tasksWord(failed.length)} из ${total} — откройте их, чтобы увидеть причину`,
+      hint: 'Откройте задачу с ошибкой, чтобы увидеть причину',
       hintTone: 'bad',
-      secondary: [{ label: 'Показать проблемы', icon: TriangleAlert, onClick: () => setShowProblems((n) => n + 1) }],
+      secondary: [...feedAction, { label: 'Показать проблемы', icon: TriangleAlert, onClick: () => setShowProblems((n) => n + 1) }],
       primary: { label: 'Исправить план', iconRight: ArrowRight, onClick: goPlan, hotkey: 'mod+enter' },
     };
   } else {
-    bar = { hint: describeRun(s), hintTone: 'warn', secondary: [{ label: 'К плану', icon: Pencil, onClick: goPlan }], primary: { label: 'Запустить заново', icon: RotateCcw, onClick: () => void restart(), confirm: RESTART_CONFIRM, hotkey: 'mod+enter' } };
+    bar = { hint: 'Готовые задачи сохранены', hintTone: 'warn', secondary: [...feedAction, { label: 'К плану', icon: Pencil, onClick: goPlan }], primary: { label: 'Запустить заново', icon: RotateCcw, onClick: () => void restart(), confirm: RESTART_CONFIRM, hotkey: 'mod+enter' } };
   }
 
   const feedPanel = (headless = false) => <FeedPanel snapshot={s} agentFilter={agentFilter} onClearAgent={() => setAgentFilter(null)} onClose={toggleFeed} onOpenTask={(id) => setOpenTask(id)} headless={headless} />;
 
   return (
-    <div className={`page run-screen ${wide && feedVisible ? 'run-screen--feed' : ''}`}>
+    <div className={`page run-screen ${wide && feedVisible && !(task && wide) ? 'run-screen--feed' : ''} ${task && wide ? 'run-screen--panel' : ''}`}>
       <div className="run-main">
-        <StatusRow snapshot={s} running={running} elapsed={elapsed} done={done} total={total} wide={wide} feedVisible={feedVisible} unread={unread} onToggleFeed={toggleFeed} onStop={() => void stop()} />
-        <AgentsStrip snapshot={s} filter={agentFilter} onFilter={(id) => setAgentFilter(agentFilter === id ? null : id)} phone={phone} />
-        {!running && s.status !== 'idle' && <RunSummary snapshot={s} elapsed={elapsed} goFiles={goFiles} goPlan={goPlan} restart={() => void restart()} onOpenTask={setOpenTask} />}
-        <Board snapshot={s} phone={phone} running={running} agentFilter={agentFilter} now={now} onOpen={setOpenTask} problemsTick={showProblems} />
+        {finished ? (
+          <RunSummary snapshot={s} elapsed={elapsed} onOpenTask={setOpenTask} />
+        ) : (
+          <>
+            <StatusRow snapshot={s} running={running} elapsed={elapsed} done={done} total={total} />
+            <AgentsStrip snapshot={s} filter={agentFilter} onFilter={(id) => setAgentFilter(agentFilter === id ? null : id)} />
+          </>
+        )}
+        <Board snapshot={s} phone={phone} running={running} finished={finished} agentFilter={agentFilter} now={now} onOpen={setOpenTask} problemsTick={showProblems} />
       </div>
-      {wide && feedVisible && <aside className="run-feed" aria-label="Лента событий">{feedPanel()}</aside>}
+      {wide && feedVisible && !task && <aside className="run-feed" aria-label="Лента событий">{feedPanel()}</aside>}
       {!wide && (
         <Drawer open={feedOverlay} onClose={() => setFeedOverlay(false)} modal={phone} label="Лента событий" title="Лента событий" width={380} className="feed-drawer">
           {feedPanel(true)}
@@ -149,7 +158,7 @@ export function RunTab({ project, choice, goPlan, goFiles, openTask, setOpenTask
   );
 }
 
-function StatusRow({ snapshot: s, running, elapsed, done, total, wide, feedVisible, unread, onToggleFeed, onStop }: { snapshot: RunSnapshot; running: boolean; elapsed: number; done: number; total: number; wide: boolean; feedVisible: boolean; unread: number; onToggleFeed: () => void; onStop: () => void }) {
+function StatusRow({ snapshot: s, running, elapsed, done, total }: { snapshot: RunSnapshot; running: boolean; elapsed: number; done: number; total: number }) {
   const meta = RUN_STATUS_META[s.status];
   const phrase = describeRun(s);
   const tasks = Object.values(s.tasks);
@@ -179,20 +188,6 @@ function StatusRow({ snapshot: s, running, elapsed, done, total, wide, feedVisib
         <span className="sr-only" aria-live="polite">
           {spoken}
         </span>
-        {wide && running && (
-          <ConfirmPopover spec={STOP_CONFIRM} onConfirm={onStop} placement="bottom" align="end">
-            {(t) => (
-              <Button {...t} variant="danger-outline" icon={Square} iconFill size="md">
-                Остановить
-              </Button>
-            )}
-          </ConfirmPopover>
-        )}
-        {wide && !feedVisible && (
-          <Button variant="secondary" icon={PanelRightOpen} onClick={onToggleFeed} tip="Лента событий (L)">
-            Лента{unread > 0 && <span className="badge badge--accent">{unread}</span>}
-          </Button>
-        )}
       </div>
       <ProgressBar
         total={total}
@@ -215,7 +210,7 @@ function StatusRow({ snapshot: s, running, elapsed, done, total, wide, feedVisib
   );
 }
 
-function AgentsStrip({ snapshot: s, filter, onFilter, phone }: { snapshot: RunSnapshot; filter: string | null; onFilter: (id: string) => void; phone: boolean }) {
+function AgentsStrip({ snapshot: s, filter, onFilter }: { snapshot: RunSnapshot; filter: string | null; onFilter: (id: string) => void }) {
   const agents = Object.values(s.agents);
   const working = agents.filter((a) => a.status === 'working');
   const groups: [string, typeof agents][] = [
@@ -224,7 +219,7 @@ function AgentsStrip({ snapshot: s, filter, onFilter, phone }: { snapshot: RunSn
     ['С ошибками:', agents.filter((a) => a.status === 'failed')],
   ];
   return (
-    <div className={`agents-strip ${phone ? 'agents-strip--scroll' : ''}`} role="group" aria-label="Агенты">
+    <div className="agents-strip" role="group" aria-label="Агенты">
       {working.length > 0 && <span className="agents-strip__label">Работают:</span>}
       {working.map((a) => {
         const current = a.currentTaskId ? s.tasks[a.currentTaskId] : undefined;
@@ -253,7 +248,7 @@ function AgentsStrip({ snapshot: s, filter, onFilter, phone }: { snapshot: RunSn
   );
 }
 
-function RunSummary({ snapshot: s, elapsed, goFiles, goPlan, restart, onOpenTask }: { snapshot: RunSnapshot; elapsed: number; goFiles: () => void; goPlan: () => void; restart: () => void; onOpenTask: (id: string) => void }) {
+function RunSummary({ snapshot: s, elapsed, onOpenTask }: { snapshot: RunSnapshot; elapsed: number; onOpenTask: (id: string) => void }) {
   const [list, setList] = useState(false);
   const tasks = Object.values(s.tasks);
   const done = tasks.filter((t) => t.status === 'done');
@@ -282,11 +277,8 @@ function RunSummary({ snapshot: s, elapsed, goFiles, goPlan, restart, onOpenTask
           )}
         </div>
         <div className="summary-card__actions">
-          <Button variant="ghost" size="sm" icon={FileText} onClick={() => setList(!list)} aria-expanded={list}>
+          <Button variant="secondary" size="sm" icon={FileText} onClick={() => setList(!list)} aria-expanded={list}>
             {list ? 'Скрыть' : 'Что сделала каждая задача'}
-          </Button>
-          <Button variant="primary" size="sm" iconRight={ArrowRight} onClick={goFiles}>
-            Открыть результат
           </Button>
         </div>
       </section>
@@ -309,11 +301,6 @@ function RunSummary({ snapshot: s, elapsed, goFiles, goPlan, restart, onOpenTask
           </ul>
           <div className="summary-card__text">Частая причина — слишком общее описание задачи. Уточните её в плане и запустите заново.</div>
         </div>
-        <div className="summary-card__actions">
-          <Button variant="primary" size="sm" iconRight={ArrowRight} onClick={goPlan}>
-            Исправить план
-          </Button>
-        </div>
       </section>
     );
   }
@@ -325,15 +312,7 @@ function RunSummary({ snapshot: s, elapsed, goFiles, goPlan, restart, onOpenTask
           <div className="summary-card__title">
             Вы остановили запуск. Готово {done.length} из {tasks.length}
           </div>
-        </div>
-        <div className="summary-card__actions">
-          <ConfirmPopover spec={RESTART_CONFIRM} onConfirm={restart} placement="bottom" align="end">
-            {(t) => (
-              <Button {...t} size="sm" variant="secondary" icon={RotateCcw}>
-                Запустить заново
-              </Button>
-            )}
-          </ConfirmPopover>
+          <div className="summary-card__text">Готовые задачи сохранены. Остальные можно запустить заново.</div>
         </div>
       </section>
     );
@@ -341,7 +320,7 @@ function RunSummary({ snapshot: s, elapsed, goFiles, goPlan, restart, onOpenTask
   return null;
 }
 
-function Board({ snapshot: s, phone, running, agentFilter, now, onOpen, problemsTick }: { snapshot: RunSnapshot; phone: boolean; running: boolean; agentFilter: string | null; now: number; onOpen: (id: string) => void; problemsTick: number }) {
+function Board({ snapshot: s, phone, running, finished, agentFilter, now, onOpen, problemsTick }: { snapshot: RunSnapshot; phone: boolean; running: boolean; finished: boolean; agentFilter: string | null; now: number; onOpen: (id: string) => void; problemsTick: number }) {
   const tasks = Object.values(s.tasks);
   const byCol = useMemo(() => Object.fromEntries(COLUMNS.map((c) => [c.id, tasks.filter((t) => c.statuses.includes(t.status))])) as Record<ColumnId, TaskState[]>, [tasks]);
   const [pick, setPick] = useState<ColumnId | null>(null);
@@ -367,7 +346,7 @@ function Board({ snapshot: s, phone, running, agentFilter, now, onOpen, problems
           label="Какие задачи показать"
           value={col}
           onChange={(v) => setPick(v)}
-          options={COLUMNS.map((c) => ({ value: c.id, label: c.id === 'problems' ? `! ${byCol[c.id].length}` : `${c.title} ${byCol[c.id].length}`, aria: `${c.title}: ${byCol[c.id].length}` }))}
+          options={COLUMNS.map((c) => ({ value: c.id, label: c.id === 'problems' ? <><TriangleAlert size={14} strokeWidth={1.75} aria-hidden /> {byCol[c.id].length}</> : `${c.title} ${byCol[c.id].length}`, aria: `${c.title}: ${byCol[c.id].length}`, tip: c.id === 'problems' ? 'Проблемы' : undefined }))}
         />
         <div className="board__list">{list.length ? list.map(card) : <div className="board__empty">Пусто</div>}</div>
       </section>
@@ -375,11 +354,18 @@ function Board({ snapshot: s, phone, running, agentFilter, now, onOpen, problems
   }
 
   const problemsEmpty = byCol.problems.length === 0;
+  // После завершения пустые колонки не нужны; одна колонка раскладывается сеткой на всю ширину.
+  const cols = finished ? COLUMNS.filter((c) => byCol[c.id].length > 0) : COLUMNS;
+  const single = finished && cols.length === 1;
   return (
-    <section className={`board ${problemsEmpty ? 'board--no-problems' : ''}`} aria-label="Задачи">
-      {COLUMNS.map((c) => {
+    <section
+      className={`board ${!finished && problemsEmpty ? 'board--no-problems' : ''} ${single ? 'board--single' : ''}`}
+      style={finished && !single ? { gridTemplateColumns: `repeat(${cols.length}, minmax(0, 1fr))` } : undefined}
+      aria-label="Задачи"
+    >
+      {cols.map((c) => {
         let items = byCol[c.id];
-        const extra = c.id === 'done' && items.length > 6 && !allDone ? items.length - 5 : 0;
+        const extra = c.id === 'done' && !single && items.length > 6 && !allDone ? items.length - 5 : 0;
         if (extra) items = items.slice(-5);
         return (
           <div key={c.id} className={`board__col board__col--${c.id}`} ref={c.id === 'problems' ? problemsRef : undefined}>
@@ -412,7 +398,7 @@ function RunTaskCard({ task: t, role, now, dim, onOpen }: { task: TaskState; rol
     <button type="button" className={`run-task run-task--${t.status} ${dim ? 'run-task--dim' : ''}`} style={{ '--agent': agentColor(t.agentId) } as CSSProperties} onClick={onOpen} aria-label={`${t.title}: ${meta.label}`}>
       <span className="run-task__line">
         <meta.icon size={14} strokeWidth={2} className={`run-task__icon tone-${meta.tone} ${t.status === 'running' ? 'spin' : ''}`} aria-hidden data-tip={meta.tip} />
-        <span className="run-task__title ellipsis">{t.title}</span>
+        <span className="run-task__title">{t.title}</span>
       </span>
       {t.error && (t.status === 'failed' || t.status === 'blocked') ? (
         <span className="run-task__error ellipsis">{t.error}</span>

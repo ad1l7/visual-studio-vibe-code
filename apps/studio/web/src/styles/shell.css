@@ -88,7 +88,7 @@
 .path-btn { font-size: 11.5px; line-height: 16px; color: var(--text-3); border-radius: var(--r-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .path-btn:hover { color: var(--text-2); }
 @media (max-width: 1279px) { .screen-header__sub { display: none; } .screen-header__title { max-width: 220px; } }
-.search-btn { display: inline-flex; align-items: center; gap: 8px; width: 200px; height: var(--control-md); padding: 0 6px 0 10px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--border); color: var(--text-3); font-size: var(--fs-13); flex-shrink: 0; }
+.search-btn { display: inline-flex; align-items: center; gap: 8px; width: auto; min-width: 150px; height: var(--control-md); padding: 0 6px 0 10px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--border); color: var(--text-3); font-size: var(--fs-13); flex-shrink: 0; }
 .search-btn:hover { border-color: var(--border-strong); color: var(--text-2); }
 .search-btn__text { flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .search-field { position: relative; display: flex; align-items: center; width: 220px; flex-shrink: 1; min-width: 120px; }
@@ -141,8 +141,8 @@
 .actionbar__hint--warn { color: var(--text); }
 .actionbar__hint--busy svg { color: var(--accent-text); }
 .actionbar__buttons { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.actionbar__kbd { display: inline-flex; margin-left: 6px; opacity: .85; }
-.actionbar__kbd .kbd { background: rgb(255 255 255 / .18); border-color: transparent; color: inherit; }
+.actionbar__kbd { display: inline-flex; margin-left: 6px; }
+.actionbar__kbd .kbd { background: rgb(0 0 0 / .22); border-color: transparent; color: inherit; }
 @media (max-width: 1023px) { .actionbar__kbd { display: none; } }
 @media (max-width: 767px) {
   .actionbar { flex-wrap: wrap; gap: 6px 8px; padding-top: 6px; padding-bottom: calc(8px + var(--safe-b)); }
@@ -156,3 +156,6 @@
 .shortcuts td { padding: 8px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
 .shortcuts__keys { white-space: nowrap; padding-right: 16px !important; width: 1%; }
 .drawer--menu .drawer__body { padding: 0; gap: 0; }
+.stepper__item { position: relative; }
+.step-bubble { position: absolute; top: calc(100% + 6px); left: 0; z-index: var(--z-tooltip); width: max-content; max-width: 220px; padding: 6px 10px; border-radius: var(--r-sm); background: var(--tooltip-bg); color: var(--tooltip-fg); font-size: var(--fs-12); line-height: var(--lh-12); pointer-events: none; animation: vs-fade-in var(--dur-fast) var(--ease-out); }
+.step-bubble--end { left: auto; right: 0; }

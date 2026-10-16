@@ -129,14 +129,24 @@ export function Popover({ open, onClose, anchor, placement = 'bottom', align = '
     };
   }, [open, update, anchor, onClose]);
 
-  // Фокус внутрь при открытии и обратно на якорь при закрытии.
+  // Фокус внутрь — когда поповер уже спозиционирован (скрытый элемент фокус не принимает),
+  // и обратно на якорь при закрытии.
+  const placed = !!pos;
+  const focused = useRef(false);
+  useLayoutEffect(() => {
+    if (!open) {
+      focused.current = false;
+      return;
+    }
+    const el = ref.current;
+    if (!placed || !el || focused.current || initialFocus === 'none') return;
+    focused.current = true;
+    const target = initialFocus === 'first' ? (el.querySelector<HTMLElement>('[role^="menuitem"]') ?? focusables(el)[0]) : el.querySelector<HTMLElement>(initialFocus);
+    (target ?? el).focus({ preventScroll: true });
+  }, [open, placed, initialFocus]);
   useEffect(() => {
     if (!open) return;
     const el = ref.current;
-    if (el && initialFocus !== 'none') {
-      const target = initialFocus === 'first' ? focusables(el)[0] : el.querySelector<HTMLElement>(initialFocus);
-      (target ?? el).focus({ preventScroll: true });
-    }
     return () => {
       if (anchor && document.activeElement && (el?.contains(document.activeElement) || document.activeElement === document.body)) anchor.focus({ preventScroll: true });
     };
@@ -150,7 +160,15 @@ export function Popover({ open, onClose, anchor, placement = 'bottom', align = '
       aria-label={label}
       tabIndex={-1}
       className={['popover', pos && `popover--${pos.side}`, className].filter(Boolean).join(' ')}
-      style={{ width, top: pos?.top ?? -9999, left: pos?.left ?? -9999, visibility: pos ? undefined : 'hidden' } as CSSProperties}
+      style={{ width, top: pos?.top ?? 0, left: pos?.left ?? 0, opacity: pos ? undefined : 0, pointerEvents: pos ? undefined : 'none' } as CSSProperties}
+      onKeyDown={(e) => {
+        if (e.key !== 'Tab') return;
+        if (role === 'menu') {
+          // Tab из меню закрывает его и возвращает фокус на кнопку.
+          e.preventDefault();
+          onClose();
+        } else trapTab(e, ref.current);
+      }}
     >
       {children}
     </div>,
@@ -184,11 +202,16 @@ export function Menu({ items, open, onClose, anchor, placement = 'bottom', align
     <Popover open={open} onClose={onClose} anchor={anchor} placement={placement} align={align} role="menu" label={label} className="menu">
       <div
         onKeyDown={(e) => {
-          if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
-          e.preventDefault();
           const list = [...e.currentTarget.querySelectorAll<HTMLElement>('[role^="menuitem"]')];
           const i = list.indexOf(document.activeElement as HTMLElement);
-          list[(i + (e.key === 'ArrowDown' ? 1 : -1) + list.length) % list.length]?.focus();
+          let next: HTMLElement | undefined;
+          if (e.key === 'ArrowDown') next = list[(i + 1) % list.length];
+          else if (e.key === 'ArrowUp') next = list[(i - 1 + list.length) % list.length];
+          else if (e.key === 'Home') next = list[0];
+          else if (e.key === 'End') next = list[list.length - 1];
+          else return;
+          e.preventDefault();
+          next?.focus();
         }}
       >
         {items.map((it) => (
@@ -231,13 +254,13 @@ export interface ConfirmSpec {
 export function ConfirmLayer({ spec, open, onClose, anchor, onConfirm, placement = 'top', align = 'end' }: { spec: ConfirmSpec; open: boolean; onClose: () => void; anchor: HTMLElement | null; onConfirm: () => void; placement?: Placement; align?: Align }) {
   const titleId = useId();
   return (
-    <Popover open={open} onClose={onClose} anchor={anchor} placement={placement} align={align} width={300} className="confirm" initialFocus="[data-safe]">
+    <Popover open={open} onClose={onClose} anchor={anchor} placement={placement} align={align} width={spec.extra ? 380 : 300} className={`confirm ${spec.extra ? 'confirm--wide' : ''}`} initialFocus="[data-safe]">
       <div role="alertdialog" aria-labelledby={titleId}>
         <div className="confirm__title" id={titleId}>{spec.title}</div>
         {spec.text && <p className="confirm__text">{spec.text}</p>}
         <div className="confirm__actions">
           {spec.extra && (
-            <Button size="sm" variant="secondary" onClick={() => { onClose(); spec.extra!.onClick(); }}>
+            <Button size="sm" variant="secondary" className="confirm__extra" onClick={() => { onClose(); spec.extra!.onClick(); }}>
               {spec.extra.label}
             </Button>
           )}

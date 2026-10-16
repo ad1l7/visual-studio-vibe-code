@@ -291,3 +291,21 @@
 @media (max-width: 767px) { .palette { top: 16px; } }
 .dialog-root > .overlay, .palette-root > .overlay { z-index: 0; }
 .palette { z-index: 1; }
+.confirm--wide .confirm__actions { flex-wrap: nowrap; }
+.confirm__extra { margin-right: auto; }
+@media (max-width: 479px) {
+  .confirm--wide .confirm__actions { flex-direction: column-reverse; align-items: stretch; }
+  .confirm--wide .confirm__actions .btn { width: 100%; }
+}
+
+/* Зоны касания на сенсорных экранах — не меньше 40 px. */
+@media (pointer: coarse) {
+  .link-btn, .disclosure__toggle, .tp-file, .agent-chip, .crumbs__link, .demo-chip, .side-project, .menu__item, .feed-row__btn, .segmented__item, .toast__action, .stage__add, .board__more, .feed__more, .completeness-inline__toggle, .engine-btn { min-height: 40px; }
+  .agent-dot, .agent-row__count, .list-editor__remove, .toast__close, .completeness__add.icon-btn--sm { min-width: 40px; min-height: 40px; }
+  .checkbox { min-height: 40px; align-items: center; }
+  .checkbox__box { margin-top: 0; }
+  .checkbox input { margin-top: 0; }
+  .agents-strip { height: 48px; }
+  .tree-row { height: 40px; }
+  .sidebar--rail .side-project { width: 44px; height: 44px; }
+}

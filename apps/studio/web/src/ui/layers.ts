@@ -48,7 +48,7 @@ export const hasModalLayer = () => stack.some((l) => l.modal);
 const FOCUSABLE = 'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 export function focusables(root: HTMLElement): HTMLElement[] {
-  return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => !el.hasAttribute('disabled') && el.offsetParent !== null);
+  return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => !el.hasAttribute('disabled') && el.getAttribute('tabindex') !== '-1' && el.offsetParent !== null);
 }
 
 /** Удерживает Tab внутри элемента. */

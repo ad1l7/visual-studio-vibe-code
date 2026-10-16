@@ -51,6 +51,11 @@ export function useLocalSetting<T>(key: string, fallback: T): [T, (v: T | ((prev
   return [value, update];
 }
 
+/** Название проекта, пока у него нет плана: то, что пользователь ввёл при создании. */
+export function projectTitle(name: string, planName?: string | null): string {
+  return planName || readLS<string | null>(`vibe.title.${name}`, null) || name;
+}
+
 export type ThemeSetting = 'system' | 'dark' | 'light';
 export type DensitySetting = 'normal' | 'compact';
 

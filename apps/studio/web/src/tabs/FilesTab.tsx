@@ -181,6 +181,14 @@ export function FilesTab({ name, path: projectPath, snapshot, refreshKey, initia
   };
 
   const readme = tree && (tree.find((n) => !n.dir && /^readme\.md$/i.test(n.name))?.path ?? tree.find((n) => n.dir && n.name === 'docker')?.children?.find((c) => /^readme\.md$/i.test(c.name))?.path);
+  // На десктопе шаг сразу показывает инструкцию по запуску, если она есть.
+  const autoOpened = useRef(false);
+  useEffect(() => {
+    if (autoOpened.current || first || phone || !readme) return;
+    autoOpened.current = true;
+    expandTo(readme);
+    show(readme);
+  }, [readme, first, phone, show]); // eslint-disable-line react-hooks/exhaustive-deps
   const tasks = snapshot ? Object.values(snapshot.tasks) : [];
   const done = tasks.filter((t) => t.status === 'done').length;
   const copyPath = () => copyText(projectPath).then(() => toast({ tone: 'success', title: 'Путь к папке скопирован', text: 'Вставьте его в проводник или Finder, чтобы открыть папку', duration: 4000 }), () => toast({ tone: 'error', title: 'Не получилось скопировать', text: projectPath }));

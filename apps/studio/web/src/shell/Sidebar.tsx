@@ -7,6 +7,7 @@ import { useNav, useProjects } from './context.tsx';
 import { DemoChip } from './DemoChip.tsx';
 import { EngineButton } from './EnginePicker.tsx';
 import { DensityMenu, ThemeMenu } from './settings.tsx';
+import { projectTitle } from '../lib/storage.ts';
 
 export interface ActiveProgress {
   name: string;
@@ -72,6 +73,7 @@ export function Sidebar({ rail, onToggleRail, active, onNavigate, onShortcuts, i
           const isActive = p.name === current;
           const prog = isActive && active?.name === p.name ? active : undefined;
           const state = prog?.running ? 'running' : projectDot(p);
+          const title = p.hasPlan ? p.title : projectTitle(p.name);
           return (
             <li key={p.name}>
               <button
@@ -79,18 +81,18 @@ export function Sidebar({ rail, onToggleRail, active, onNavigate, onShortcuts, i
                 className={`side-project ${isActive ? 'side-project--active' : ''}`}
                 aria-current={isActive ? 'page' : undefined}
                 onClick={() => open(p)}
-                data-tip={rail ? `${p.title} · ${PROJECT_PILL[state].label}` : undefined}
-                aria-label={rail ? p.title : undefined}
+                data-tip={rail ? `${title} · ${PROJECT_PILL[state].label}` : undefined}
+                aria-label={rail ? title : undefined}
               >
                 {rail ? (
                   <span className="side-project__letter" aria-hidden>
-                    {(p.title || p.name).charAt(0).toUpperCase()}
+                    {(title || p.name).charAt(0).toUpperCase()}
                     <Dot state={state} className="side-project__dot" />
                   </span>
                 ) : (
                   <>
                     <Dot state={state} />
-                    <span className="side-project__title ellipsis">{p.title}</span>
+                    <span className="side-project__title ellipsis">{title}</span>
                     {prog?.running && prog.total > 0 ? (
                       <span className="side-project__meta num">
                         {prog.done}/{prog.total}

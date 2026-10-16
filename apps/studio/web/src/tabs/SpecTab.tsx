@@ -1,4 +1,4 @@
-import { ArrowRight, Check, ChevronDown, Circle, CircleCheck, CircleX, LoaderCircle, Pencil, Plus, Sparkles } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, Circle, CircleCheck, CircleX, Info, LoaderCircle, Pencil, Plus, Sparkles } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState, type Ref } from 'react';
 import type { ClarifyQuestion } from '../api.ts';
 import type { ProjectHook } from '../App.tsx';
@@ -27,7 +27,7 @@ export function useNow(active: boolean, ms = 1000) {
 
 const scrollOpts = (): ScrollIntoViewOptions => ({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 
-export function SpecTab({ project, flow, goPlan }: { project: ProjectHook; flow: SpecFlow; goPlan: () => void }) {
+export function SpecTab({ project, flow, goPlan, goRun }: { project: ProjectHook; flow: SpecFlow; goPlan: () => void; goRun: () => void }) {
   const { details, plannerLog } = project;
   const toast = useToast();
   const narrow = useNarrow();
@@ -36,6 +36,8 @@ export function SpecTab({ project, flow, goPlan }: { project: ProjectHook; flow:
   const plannerRef = useRef<HTMLDivElement>(null);
   const questionsRef = useRef<HTMLDivElement>(null);
   const hasPlan = !!details?.plan;
+  const running = project.running;
+  const specChanged = spec.trim() !== (details?.spec ?? '').trim();
   const completeness = specCompleteness(spec);
   const now = useNow(!!busy);
 
@@ -82,7 +84,7 @@ export function SpecTab({ project, flow, goPlan }: { project: ProjectHook; flow:
   const editing = !questions && !busy;
   useCommands(
     'spec',
-    editing
+    editing && !running
       ? SPEC_TEMPLATES.map((t) => ({
           id: `spec:tpl:${t.id}`,
           group: 'Действия' as const,
@@ -107,18 +109,21 @@ export function SpecTab({ project, flow, goPlan }: { project: ProjectHook; flow:
       primary: { label: 'Составить план', iconRight: ArrowRight, onClick: () => void flow.makePlan(true), hotkey: 'mod+enter' },
     };
   } else if (hasPlan) {
-    bar = {
-      hint: 'План уже составлен. Новый план заменит текущий',
-      secondary: [{ label: 'К плану', onClick: goPlan }],
-      primary: {
-        label: 'Пересобрать план',
-        onClick: () => void flow.clarify(),
-        disabled: empty,
-        disabledReason: 'Напишите хотя бы пару предложений',
-        confirm: { title: 'Составить план заново?', text: 'Текущий план и ваши правки в нём будут заменены', confirmLabel: 'Пересобрать' },
-        hotkey: 'mod+enter',
-      },
+    const rebuild: Action = {
+      label: 'Пересобрать план',
+      onClick: () => void flow.clarify(),
+      disabled: empty || running || !specChanged,
+      disabledReason: running ? 'Агенты работают — остановите запуск, чтобы пересобрать план' : empty ? 'Напишите хотя бы пару предложений' : 'Сначала измените ТЗ — тогда план можно составить заново',
+      confirm: { title: 'Составить план заново?', text: 'Текущий план и ваши правки в нём будут заменены', confirmLabel: 'Пересобрать' },
+      hotkey: 'mod+enter',
     };
+    if (running) {
+      bar = { hint: 'Агенты работают по текущему плану', secondary: [{ ...rebuild, hotkey: undefined }], primary: { label: 'К запуску', iconRight: ArrowRight, onClick: goRun, hotkey: 'mod+enter' } };
+    } else if (specChanged && !empty) {
+      bar = { hint: 'ТЗ изменено — составим план заново', secondary: [{ label: 'К плану', onClick: goPlan }], primary: rebuild };
+    } else {
+      bar = { hint: 'План уже составлен. Измените ТЗ, если нужно составить его заново', secondary: [{ ...rebuild, hotkey: undefined }], primary: { label: 'К плану', iconRight: ArrowRight, onClick: goPlan, hotkey: 'mod+enter' } };
+    }
   } else {
     bar = {
       hint: empty ? undefined : `Подробность ТЗ: ${completeness.score} из 6 · студия задаст пару уточнений`,
@@ -134,10 +139,23 @@ export function SpecTab({ project, flow, goPlan }: { project: ProjectHook; flow:
         <p className="muted">Пишите своими словами — как объясняли бы знакомому.</p>
       </header>
 
+      {running && hasPlan && (
+        <Callout
+          tone="info"
+          icon={Info}
+          action={
+            <button type="button" className="link-btn" onClick={goRun}>
+              К запуску <ArrowRight size={14} aria-hidden />
+            </button>
+          }
+        >
+          Агенты работают по этому плану. Менять ТЗ и план можно после остановки.
+        </Callout>
+      )}
       {editing ? (
         <>
-          <TemplateChips hasText={!empty} onInsert={insertTemplate} />
-          {narrow && <CompletenessInline spec={spec} onAppend={appendHint} />}
+          {!running && <TemplateChips hasText={!empty} onInsert={insertTemplate} />}
+          {narrow && !(running && hasPlan) && <CompletenessInline spec={spec} onAppend={appendHint} />}
           <div className="spec-grid">
             <div className="spec-editor">
               <Textarea
@@ -148,6 +166,7 @@ export function SpecTab({ project, flow, goPlan }: { project: ProjectHook; flow:
                 maxHeight={520}
                 value={spec}
                 onChange={(e) => setSpec(e.target.value)}
+                readOnly={running && hasPlan}
                 placeholder={SPEC_PLACEHOLDER}
                 aria-label="Техническое задание"
                 aria-describedby="spec-counter"
@@ -166,7 +185,7 @@ export function SpecTab({ project, flow, goPlan }: { project: ProjectHook; flow:
                 </span>
               </div>
             </div>
-            {!narrow && (
+            {!narrow && !(running && hasPlan) && (
               <aside className="spec-aside card" aria-label="Что стоит указать">
                 <div className="spec-aside__title">Что стоит указать</div>
                 <Completeness spec={spec} onAppend={appendHint} />
@@ -305,14 +324,16 @@ function CompletenessInline({ spec, onAppend }: { spec: string; onAppend: (t: st
 }
 
 const PLANNER_STEPS = {
-  clarify: { title: 'Изучаю ТЗ…', steps: ['Читаю ТЗ', 'Ищу неясные места', 'Формулирую вопросы'], at: [0, 4, 10] },
-  plan: { title: 'Проектирую систему и собираю команду агентов…', steps: ['Изучаю ТЗ', 'Подбираю технологии и команду', 'Расставляю задачи по этапам'], at: [0, 10, 30] },
+  clarify: { title: 'Изучаю ТЗ…', steps: ['Читаю ТЗ', 'Ищу неясные места', 'Формулирую вопросы'], at: [0, 4, 10], words: [/читает|изуча/i, /пробел|неясн|ищет/i, /вопрос/i] },
+  plan: { title: 'Проектирую систему и собираю команду агентов…', steps: ['Изучаю ТЗ', 'Подбираю технологии и команду', 'Расставляю задачи по этапам'], at: [0, 10, 30], words: [/читает|изуча/i, /стек|команд|технолог/i, /задач|этап|зависим/i] },
 };
 
 function PlannerCard({ busy, startedAt, now, log, ref }: { busy: 'clarify' | 'plan'; startedAt: number; now: number; log: string[]; ref: Ref<HTMLDivElement> }) {
   const cfg = PLANNER_STEPS[busy];
   const sec = (now - startedAt) / 1000;
-  const active = cfg.at.filter((t) => sec >= t).length - 1;
+  // Шаг по журналу планировщика; если журнал молчит — по времени.
+  const byLog = Math.max(-1, ...log.map((l) => cfg.words.reduce((m, re, i) => (re.test(l) ? i : m), -1)));
+  const active = byLog >= 0 ? byLog : cfg.at.filter((t) => sec >= t).length - 1;
   return (
     <div ref={ref} className="planner card" role="status">
       <div className="planner__head">

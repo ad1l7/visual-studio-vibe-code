@@ -1,10 +1,9 @@
 import { Check, FileText, Menu, PackageCheck, Rocket, Search, Users, type LucideIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { STEP_LABELS, STEP_SHORT, type ProjectStep } from '../labels.ts';
 import { useNarrow, useWide } from '../lib/media.ts';
 import { IconButton } from '../ui/Button.tsx';
 import { Keys } from '../ui/display.tsx';
-import { useToast } from '../ui/toast.tsx';
 import { useOpenPalette } from './commands.tsx';
 import { DemoChip } from './DemoChip.tsx';
 import { useLocalSetting } from '../lib/storage.ts';
@@ -38,8 +37,14 @@ export function copyText(text: string): Promise<void> {
 }
 
 export function Stepper({ steps, current, onGo, variant }: { steps: StepInfo[]; current: ProjectStep; onGo: (s: ProjectStep) => void; variant: 'full' | 'segments' }) {
-  const toast = useToast();
   const wide = useWide();
+  // Причина недоступности шага — подсказкой у самого шага, а не тостом в углу.
+  const [bubble, setBubble] = useState<ProjectStep | null>(null);
+  useEffect(() => {
+    if (!bubble) return;
+    const t = setTimeout(() => setBubble(null), 2800);
+    return () => clearTimeout(t);
+  }, [bubble]);
   return (
     <ol className={`stepper stepper--${variant}`} aria-label="Шаги проекта">
       {steps.map((s, i) => {
@@ -49,6 +54,11 @@ export function Stepper({ steps, current, onGo, variant }: { steps: StepInfo[]; 
         const prevDone = i > 0 && steps[i - 1]!.state !== 'locked' && steps[i - 1]!.state !== 'todo';
         return (
           <li key={s.id} className="stepper__item">
+            {bubble === s.id && s.tip && (
+              <span className={`step-bubble ${i >= 2 ? 'step-bubble--end' : ''}`} role="status">
+                {s.tip}
+              </span>
+            )}
             {variant === 'full' && i > 0 && <span className={`stepper__line ${prevDone && !locked ? 'stepper__line--done' : ''}`} aria-hidden />}
             <button
               type="button"
@@ -58,7 +68,7 @@ export function Stepper({ steps, current, onGo, variant }: { steps: StepInfo[]; 
               data-tip={s.tip}
               onClick={() => {
                 if (locked) {
-                  if (s.tip) toast({ tone: 'info', title: s.tip, duration: 3000 });
+                  if (s.tip) setBubble(s.id);
                   return;
                 }
                 onGo(s.id);
@@ -115,7 +125,7 @@ export function ScreenHeader({ title, sub, onMenu, children, right, onSearch }: 
         ) : (
           <button type="button" className="search-btn" onClick={onSearch} aria-label="Поиск и команды">
             <Search size={14} strokeWidth={1.75} aria-hidden />
-            <span className="search-btn__text">Поиск и команды</span>
+            <span className="search-btn__text">Поиск</span>
             <Keys combo="mod+k" />
           </button>
         ))}

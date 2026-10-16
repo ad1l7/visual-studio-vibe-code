@@ -114,7 +114,7 @@ export function PlanTab({ project, draft: planDraft, choice, onStarted, goSpec, 
 
   const hint = dirty
     ? 'Есть несохранённые изменения'
-    : `${agentsWord(draft.agents.length)} · ${tasksWord(draft.tasks.length)} · ${stagesWord(columns.length)} · ${runSettingsHint(settings)}`;
+    : `Проверьте команду и план — можно запускать · ${agentsWord(draft.agents.length)} · ${tasksWord(draft.tasks.length)} · ${runSettingsHint(settings)}`;
 
   return (
     <div className="page plan-screen">
@@ -326,7 +326,7 @@ function AgentRow({ agent: a, tasks, pinned, readOnly, canDelete, onOpen, onHove
           <span className="agent-row__desc ellipsis">{a.description}</span>
         </span>
       </button>
-      <button type="button" className="agent-row__count" onClick={onPin} aria-pressed={pinned} aria-label={`${tasksWord(tasks)}: показать только задачи агента`} data-tip={`${tasksWord(tasks)} · показать только их`}>
+      <button type="button" className="agent-row__count" tabIndex={-1} onClick={onPin} aria-pressed={pinned} aria-label={`${tasksWord(tasks)}: показать только задачи агента`} data-tip={`${tasksWord(tasks)} · показать только их`}>
         <Badge tone={pinned ? 'accent' : 'neutral'}>{tasks}</Badge>
       </button>
       <IconButton ref={menu.ref} icon={Ellipsis} size="sm" label={`Действия: ${a.role}`} onClick={menu.toggle} aria-haspopup="menu" aria-expanded={menu.open} />
@@ -363,8 +363,9 @@ function StageLane({ plan, columns, taskState, readOnly, onHover, onOpen, onAdd 
 
   const measure = () => {
     const el = lane.current;
-    if (!el || narrow) return setEdges({ left: false, right: false });
-    setEdges({ left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 });
+    const next = !el || narrow ? { left: false, right: false } : { left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 };
+    // Новый объект только при изменении — иначе эффект без зависимостей зациклится.
+    setEdges((prev) => (prev.left === next.left && prev.right === next.right ? prev : next));
   };
   useEffect(() => {
     measure();

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { ACTIVE_TASK, agentsWord, type ProjectStep } from './labels.ts';
 import { useHotkey } from './lib/hotkeys.ts';
 import { useNarrow, usePhone } from './lib/media.ts';
-import { useLocalSetting } from './lib/storage.ts';
+import { projectTitle, useLocalSetting } from './lib/storage.ts';
 import { ProjectsScreen } from './screens/Projects.tsx';
 import { ActionBarSlotContext } from './shell/ActionBar.tsx';
 import { EngineProvider, NavContext, ProjectsProvider, useEngine, useNav, useProjects, type Guard, type NavValue, type Route } from './shell/context.tsx';
@@ -143,8 +143,8 @@ function Shell() {
     { id: 'go:new', group: 'Перейти', label: 'Новый проект', icon: Plus, keywords: ['создать', 'new'], run: () => go(undefined, 'spec', { newProject: true }) },
     { id: 'go:home', group: 'Перейти', label: 'Все проекты', icon: FolderOpen, keywords: ['главная', 'список', 'home'], run: () => go() },
     ...(projects ?? []).map<Command>((p) => ({ id: `go:p:${p.name}`, group: 'Перейти', label: `Проект: ${p.title}`, hint: p.name, icon: FolderOpen, keywords: [p.name], run: () => go(p.name, smartStep(p)) })),
-    ...(['system', 'dark', 'light'] as const).map<Command>((t) => ({ id: `set:theme:${t}`, group: 'Настройки', label: `Тема: ${THEME_LABELS[t].toLowerCase()}`, hint: theme === t ? 'выбрано' : undefined, icon: t === 'dark' ? Moon : t === 'light' ? Sun : Monitor, keywords: ['тема', 'theme', t === 'dark' ? 'темная ночь' : t === 'light' ? 'светлая день' : 'система'], run: () => setTheme(t) })),
-    ...(['normal', 'compact'] as const).map<Command>((d) => ({ id: `set:density:${d}`, group: 'Настройки', label: `Плотность: ${DENSITY_LABELS[d].toLowerCase()}`, hint: density === d ? 'выбрано' : undefined, icon: d === 'compact' ? Rows4 : Rows3, keywords: ['плотность', 'компактно', 'density'], run: () => setDensity(d) })),
+    ...(['system', 'dark', 'light'] as const).filter((t) => t !== theme).map<Command>((t) => ({ id: `set:theme:${t}`, group: 'Настройки', label: `Тема: ${THEME_LABELS[t].toLowerCase()}`, hint: theme === t ? 'выбрано' : undefined, icon: t === 'dark' ? Moon : t === 'light' ? Sun : Monitor, keywords: ['тема', 'theme', t === 'dark' ? 'темная ночь' : t === 'light' ? 'светлая день' : 'система'], run: () => setTheme(t) })),
+    ...(['normal', 'compact'] as const).filter((d) => d !== density).map<Command>((d) => ({ id: `set:density:${d}`, group: 'Настройки', label: `Плотность: ${DENSITY_LABELS[d].toLowerCase()}`, hint: density === d ? 'выбрано' : undefined, icon: d === 'compact' ? Rows4 : Rows3, keywords: ['плотность', 'компактно', 'density'], run: () => setDensity(d) })),
     { id: 'set:engine', group: 'Настройки', label: 'Движок и модель…', icon: Settings2, keywords: ['модель', 'claude', 'демо', 'engine'], run: () => setEngineOpen(true) },
     { id: 'set:keys', group: 'Настройки', label: 'Горячие клавиши', icon: Keyboard, hotkey: 'shift+?', keywords: ['клавиши', 'shortcuts'], run: () => setShortcutsOpen(true) },
   ]);
@@ -193,6 +193,9 @@ function ProjectView({ name, tab, onProgress }: { name: string; tab: Tab; onProg
   // S1: новый шаг всегда открывается с начала.
   useLayoutEffect(() => {
     contentRef.current?.scrollTo({ top: 0 });
+    // Фокус не должен теряться на body после смены шага (например, по Alt+1…4).
+    const a = document.activeElement;
+    if (!a || a === document.body) contentRef.current?.focus({ preventScroll: true });
   }, [tab]);
 
   // Несохранённые правки плана: спрашиваем при уходе из проекта или на шаг «ТЗ».
@@ -239,7 +242,7 @@ function ProjectView({ name, tab, onProgress }: { name: string; tab: Tab; onProg
   }, [hasPlan, running, status, refresh]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Заголовок вкладки браузера.
-  const title = details?.plan?.project.name ?? name;
+  const title = projectTitle(name, details?.plan?.project.name);
   const [seenDone, setSeenDone] = useState(false);
   useEffect(() => {
     if (tab === 'run' || tab === 'files') setSeenDone(true);
@@ -304,7 +307,7 @@ function ProjectView({ name, tab, onProgress }: { name: string; tab: Tab; onProg
           onGo={goTab}
           onCopyPath={() => details && copyText(details.path).then(() => toast({ tone: 'success', title: 'Путь к папке скопирован', duration: 2000 }), () => {})}
         />
-        <div className="content" ref={contentRef} id="content">
+        <div className="content" ref={contentRef} id="content" tabIndex={-1}>
           {!details ? (
             <div className="page">
               <Skeleton lines={5} height={20} />
@@ -404,7 +407,7 @@ interface ViewState {
 function TabContent({ tab, project, draft, flow, name, goTab, choice, view }: { tab: Tab; project: ProjectHook; draft: PlanDraft; flow: SpecFlow; name: string; goTab: (t: Tab) => void; choice: ReturnType<typeof useEngine>['choice']; view: ViewState }) {
   const nav = useNav();
   const { snapshot } = project;
-  if (tab === 'spec') return <SpecTab project={project} flow={flow} goPlan={() => goTab('plan')} />;
+  if (tab === 'spec') return <SpecTab project={project} flow={flow} goPlan={() => goTab('plan')} goRun={() => goTab('run')} />;
   if (tab === 'plan') return <PlanTab project={project} draft={draft} choice={choice} onStarted={() => goTab('run')} goSpec={() => goTab('spec')} goRun={() => goTab('run')} focusTask={view.planFocus} clearFocus={() => view.setPlanFocus(null)} />;
   if (tab === 'run')
     return (

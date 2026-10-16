@@ -12,6 +12,7 @@ const dist = join(root, 'web', 'dist-demo');
 const js = readFileSync(join(dist, 'app.js'), 'utf8').replace(/<\/script/gi, '<\\/script');
 const css = readFileSync(join(dist, 'app.css'), 'utf8').replace(/<\/style/gi, '<\\/style');
 const html = `<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Vibe Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>${css}</style>

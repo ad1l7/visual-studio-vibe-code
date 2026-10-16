@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.ts';
 import { formatRelative, PROJECT_PILL, projectDot, smartStep, STEP_LABELS } from '../labels.ts';
 import { usePhone } from '../lib/media.ts';
+import { projectTitle, writeLS } from '../lib/storage.ts';
 import { useNav, useProjects } from '../shell/context.tsx';
 import { ScreenHeader } from '../shell/ProjectHeader.tsx';
 import { Button, IconButton } from '../ui/Button.tsx';
@@ -39,7 +40,8 @@ export function ProjectsScreen({ onSearch }: { onSearch?: () => void }) {
   useEffect(refresh, [refresh]);
 
   const empty = projects !== null && projects.length === 0;
-  const showForm = formOpen || empty;
+  // При небольшом числе проектов форма видна сразу: это самое частое действие.
+  const showForm = formOpen || empty || (projects !== null && projects.length < 6);
   const filtered = useMemo(() => {
     if (!projects) return null;
     const q = norm(query.trim());
@@ -67,16 +69,18 @@ export function ProjectsScreen({ onSearch }: { onSearch?: () => void }) {
                   <input className="input" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Найти проект…" aria-label="Найти проект" />
                 </div>
               )}
-              <Button variant="primary" icon={Plus} onClick={() => setFormOpen(true)}>
-                Новый проект
-              </Button>
+              {!showForm && (
+                <Button variant="primary" icon={Plus} onClick={() => setFormOpen(true)}>
+                  Новый проект
+                </Button>
+              )}
             </>
           )
         }
       />
       <div className="content">
         <div className="page page--narrow projects">
-          {showForm && <NewProjectForm canClose={!empty} onClose={() => setFormOpen(false)} focusTick={nav.newProjectTick} />}
+          {showForm && <NewProjectForm canClose={!empty && projects !== null && projects.length >= 6} onClose={() => setFormOpen(false)} focusTick={nav.newProjectTick} autoFocus={empty} />}
           {listError && <div className="field__error">{listError}</div>}
           {phone && projects && projects.length >= 6 && (
             <div className="search-field search-field--block">
@@ -101,7 +105,7 @@ export function ProjectsScreen({ onSearch }: { onSearch?: () => void }) {
                     <button type="button" className="project-row" onClick={() => nav.go(p.name, step)}>
                       <Dot state={state} />
                       <span className="project-row__main">
-                        <span className="project-row__title ellipsis">{p.title}</span>
+                        <span className="project-row__title ellipsis">{p.hasPlan ? p.title : projectTitle(p.name)}</span>
                         <span className="project-row__sub ellipsis">
                           {p.name} · {STEP_LABELS[step]}
                         </span>
@@ -146,7 +150,7 @@ function HowItWorks() {
   );
 }
 
-function NewProjectForm({ canClose, onClose, focusTick }: { canClose: boolean; onClose: () => void; focusTick: number }) {
+function NewProjectForm({ canClose, onClose, focusTick, autoFocus }: { canClose: boolean; onClose: () => void; focusTick: number; autoFocus?: boolean }) {
   const nav = useNav();
   const { refresh } = useProjects();
   const [title, setTitle] = useState('');
@@ -157,7 +161,9 @@ function NewProjectForm({ canClose, onClose, focusTick }: { canClose: boolean; o
   const slug = folder ?? slugify(title);
   const valid = NAME_RE.test(slug);
 
-  useEffect(() => input.current?.focus(), [focusTick]);
+  useEffect(() => {
+    if (focusTick || autoFocus) input.current?.focus();
+  }, [focusTick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const create = async () => {
     if (!valid || busy) return;
@@ -165,6 +171,7 @@ function NewProjectForm({ canClose, onClose, focusTick }: { canClose: boolean; o
     setBusy(true);
     try {
       await api('/api/projects', { body: { name: slug } });
+      if (title.trim() && title.trim() !== slug) writeLS(`vibe.title.${slug}`, title.trim());
       refresh();
       nav.go(slug, 'spec');
     } catch (e) {
