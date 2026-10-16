@@ -1,0 +1,10 @@
+{
+  "name": "@vibe/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": { "vibe": "./src/index.ts" },
+  "dependencies": {
+    "@vibe/core": "workspace:*"
+  }
+}
