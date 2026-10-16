@@ -19,6 +19,7 @@ import { EmptyState, Skeleton } from './ui/display.tsx';
 import { Dialog, Drawer } from './ui/overlay.tsx';
 import { useToast } from './ui/toast.tsx';
 import { usePlanDraft, type PlanDraft } from './usePlanDraft.ts';
+import { useSpecFlow, type SpecFlow } from './useSpecFlow.ts';
 import { useProject } from './useProject.ts';
 import { TriangleAlert } from 'lucide-react';
 
@@ -164,6 +165,9 @@ function ProjectView({ name, tab, onProgress }: { name: string; tab: Tab; onProg
   const contentRef = useRef<HTMLDivElement>(null);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   const [leave, setLeave] = useState<null | (() => void)>(null);
+  const tabRef = useRef(tab);
+  tabRef.current = tab;
+  const flow = useSpecFlow(project, { name, choice, isOnSpec: () => tabRef.current === 'spec', onPlanned: () => nav.go(name, 'plan'), openPlan: () => nav.go(name, 'plan') });
 
   // S1: новый шаг всегда открывается с начала.
   useLayoutEffect(() => {
@@ -261,7 +265,7 @@ function ProjectView({ name, tab, onProgress }: { name: string; tab: Tab; onProg
               <Skeleton lines={5} height={20} />
             </div>
           ) : (
-            <TabContent tab={tab} project={project} draft={draft} name={name} goTab={goTab} choice={choice} />
+            <TabContent tab={tab} project={project} draft={draft} flow={flow} name={name} goTab={goTab} choice={choice} />
           )}
         </div>
         <div className="actionbar-slot" ref={setSlot} data-active={activeTasks || undefined} />
@@ -345,11 +349,11 @@ function ProjectHeaderBar({ title, path, steps, tab, onGo, onCopyPath }: { title
   );
 }
 
-function TabContent({ tab, project, draft, name, goTab, choice }: { tab: Tab; project: ProjectHook; draft: PlanDraft; name: string; goTab: (t: Tab) => void; choice: ReturnType<typeof useEngine>['choice'] }) {
+function TabContent({ tab, project, draft, flow, name, goTab, choice }: { tab: Tab; project: ProjectHook; draft: PlanDraft; flow: SpecFlow; name: string; goTab: (t: Tab) => void; choice: ReturnType<typeof useEngine>['choice'] }) {
   const { snapshot } = project;
+  if (tab === 'spec') return <SpecTab project={project} flow={flow} goPlan={() => goTab('plan')} />;
   return (
     <div className="page">
-      {tab === 'spec' && <SpecTab project={project} choice={choice} onPlanned={() => goTab('plan')} />}
       {tab === 'plan' && <PlanTab project={project} draft={draft} choice={choice} onStarted={() => goTab('run')} goSpec={() => goTab('spec')} />}
       {tab === 'run' && <RunTab project={project} choice={choice} goPlan={() => goTab('plan')} goFiles={() => goTab('files')} />}
       {tab === 'files' && <FilesTab name={name} refreshKey={snapshot ? Object.values(snapshot.tasks).filter((t) => t.status === 'done').length : 0} />}
